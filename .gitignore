@@ -1,0 +1,6 @@
+# Ignore all pycache locations
+*__pycache__*
+# Do not include build in the repo
+build 
+# Test Data is not included in the repo either, as the files will be quite big
+test_data/*

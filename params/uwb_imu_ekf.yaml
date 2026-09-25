@@ -1,0 +1,84 @@
+# Parameters for the standalone CAMLS UWB/IMU EKF (most values from setup3 yaml files).
+
+# Drone namespaces(has to match drone_geometry and ns in bag_converter.py)
+drones: [falcon1, falcon2, falcon3]
+
+physics:
+  gravity: 9.81             
+  cable_stiffness: 400.0    # [N/m]
+  cable_damping: 20.0       # [N s/m]
+  allow_slack: false        # if true, tension clamped at 0 when a cable is compressed
+
+payload:
+  mass: 1.45                        # [kg]
+  inertia: [0.04, 0.05, 0.08]       # [kg m^2]
+
+
+# all values from setup3
+drone_geometry:
+  falcon1:                                  
+    mass: 0.5                               
+    inertia: [0.00164, 0.00184, 0.0030]     
+    cable_length: 1.0                       
+    attach_point_payload: [0.26, 0.22, 0.06] # in payload frame
+    hook_offset: [0.0, 0.0, -0.03]           # in drone body frame
+    uwb_antenna: [0.00, 0.10, 0.04]          # in drone body frame
+  falcon2:                                  
+    mass: 0.5
+    inertia: [0.00164, 0.00184, 0.0030]
+    cable_length: 1.0
+    attach_point_payload: [0.26, -0.22, 0.06]
+    hook_offset: [0.0, 0.0, -0.03]
+    uwb_antenna: [0.09, -0.05, 0.04]
+  falcon3:                                  
+    mass: 0.5
+    inertia: [0.00164, 0.00184, 0.0030]
+    cable_length: 1.0
+    attach_point_payload: [-0.28, 0.0, 0.06]
+    hook_offset: [0.0, 0.0, -0.03]
+    uwb_antenna: [-0.09, -0.05, 0.04]
+
+filter:
+  estimate_imu_bias: false      # Whether or not to include the bias estimation
+  anchor_drone: 0               # index of the "captain" drone
+  max_integration_step: 0.001   # longest RK4 step time(in seconds)
+  use_mocap: true
+  use_uwb: true
+  use_cable: true
+  mocap_rate_hz: 100.0          # anchor odom is subsampled to this rate
+  log_rate_hz: 50.0             # rate at which estimates are logged for plotting
+  init_pose_offset: 3.0         # offset from ground truth of initial pose guess(applied in random direction)
+  init_ang_offset: 45.0         # offset from ground truth of initial orientation guess(applied in random direction)
+
+# Initial state covariance P0(expressed as 1-sigma stddev).
+initial_sigma:
+  payload_pos: 0.05     # [m]
+  payload_vel: 0.1      # [m/s]
+  payload_att: 0.05     # [rad]
+  payload_rate: 0.1     # [rad/s]
+  drone_pos: 0.05       # [m]
+  drone_vel: 0.1        # [m/s]
+  drone_att: 0.05       # [rad]
+  gyro_bias: 0.01       # [rad/s]    
+  acc_bias: 0.1         # [m/s^2]   
+
+# Continuous-time noise densities from sim.
+process_noise:
+  acc: 0.1              
+  gyro: 0.01            
+  acc_bias_walk: 1.0e-3   
+  gyro_bias_walk: 1.0e-4  
+  payload_force: 0.5   # guess(not specifically modeled)
+  payload_torque: 2.0  # guess(not specifically modeled)
+
+# measurement noise.
+measurement_noise:
+  uwb: 0.3              # should match bag_converter.py noise_std
+  cable_dir: 0.035      
+  mocap_pos: 0.005      
+  mocap_att: 0.01       
+
+plot:
+  output_folder: "hover_test_30cmUWB_Offset5m45deg "
+  enabled: true
+  show: false           # whether or not to auto-show plots
