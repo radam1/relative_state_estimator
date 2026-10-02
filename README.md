@@ -2,7 +2,48 @@
 
 State estimator for the CAMLS three-drone cable-suspended load formation, built with only UWB peer-to-peer ranging and onboard IMUs. Cable-direction can be sensed from IMU measurements. The filter is a standard EKF with attitude parameterised by euler angles to maintain observability. The system definition, dynamics derivation, and observability analysis are in [CAMLS_Range_Based_Observability_Analysis.pdf](docs/CAMLS_Range_Based_Observability_Analysis.pdf).
 
-## States
+## Instructions for Use
+
+### Converting a ros1 bag
+To convert from a ros1 bag, place the bag in the <ws_folder>/test_data/bags folder. 
+> NOTE: PLEASE ENSURE THAT THE BAG ONLY CONTAINS TAUT-CABLE FLIGHT FOR THE DRONE. THE EKF CANNOT WORK WITH SLACK CABLE DATA.
+
+Once the bag is in place, use the bag_converter.py file to convert the bag to a series of csv files. First ensure that rosbags is installed in the python environment: 
+
+```bash 
+python3 -m pip install rosbags --break-system-packages 
+# OR you can use a conda/venv environment containing the rosbags library
+``` 
+
+Then, use the converter with the command: 
+```bash 
+python3 bag_converter.py <bag_file> --uwb-rate <desired_rate_hz> --uwb-noise <range_std_m> -o <desired_output_dir>
+``` 
+
+Replacing the arguments with the bag file location, desired uwb rate in Hz, desired UWB ranging noise std in meters, and the desired output folder(which will be passed to the cpp dataset reader). 
+
+### Building the ekf
+To build the code, register the cmake project, make a build directory, and build with the following commands inside the repo itself: 
+
+```bash 
+mkdir build 
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+``` 
+
+### Running the ekf test
+After the code has been built, the ekf test can be run with the command: 
+```bash 
+./build/run_ekf_test <csv_directory> 
+```
+
+Where `<csv_directory>` is the same as the `<desired_output_dir>` from the conversion command. 
+
+### Adjusting ekf parameters: 
+The parameters can be adjusted in `params/uwb_imu_ekf.yaml`. The most important sections for tuning are the filter and noise fields, but the plot field also allows for specifying a plot output folder. 
+
+## Overview of the EKF Structure
+### States
 
 Each of the four bodies (payload + 3 drones) carries a full 6-DOF state expressed in the world frame:
 
@@ -25,10 +66,10 @@ $$
 
 Cable states are not part of the filter state, as they can be computed using the states and the payload/drone geometry. 
 
-## Inputs
+### Inputs
 For each drone, the body-frame collective force $F_i$ and moment $M_i$ produced by the rotors. These can be computed from motor RPM given a motor/airframe model.
 
-## Measurements
+### Measurements
 
 The measurement vector $y \in \mathbb{R}^{36}$:
 
@@ -43,7 +84,7 @@ The measurement vector $y \in \mathbb{R}^{36}$:
 
 Drone 1's MoCap pose anchors the formation in the world frame. Every other body is observed only relative to it, through ranges, cable directions, and IMU data. The accelerometer is treated as a measurement rather than an input because it senses cable tension.
 
-## Filter
+### Filter
 
 A standard EKF over $x \in \mathbb{R}^{48}$:
 
@@ -52,7 +93,7 @@ A standard EKF over $x \in \mathbb{R}^{48}$:
 
 Section 9 of the PDF derives $A$ and $C$ analytically. It uses six per-cable Jacobians ($De_i,\ D\dot e_i,\ Dl_i,\ Dq_i,\ D\tau_i,\ Ds_i/Du_i$), which are computed once per cable per step and reused.
 
-## Observability
+### Observability
 
 The local observability matrix $\mathcal{O} = [C;\ CA;\ \dots;\ CA^{47}]$ is full rank (48) at every tested equilibrium where the cables are splayed. When all cables are vertical, the thrust axis is parallel to the cable and drone yaw cannot be observed. The rank then drops to 40, or to 44 when the hook and UWB antenna are offset from the drone's vertical axis. Keep the cables splayed. This is already the normal CAMLS operating condition.
 

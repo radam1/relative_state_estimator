@@ -13,7 +13,6 @@ payload:
   mass: 1.45                        # [kg]
   inertia: [0.04, 0.05, 0.08]       # [kg m^2]
 
-
 # all values from setup3
 drone_geometry:
   falcon1:                                  

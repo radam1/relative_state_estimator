@@ -23,6 +23,7 @@ struct DroneStreams {
   std::vector<PoseSample> odom;      // ground truth
   std::vector<MotorSample> motors;   
   std::vector<CableSample> cable;    
+};
 
 // Events to construct timeline of all measurements
 struct Event {
