@@ -207,6 +207,9 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
   p.plot.show = plot.flag("show");
   p.plot.output_folder = plot.text("output_folder");
 
+  const Section diagnostics = root.sub("diagnostics");
+  p.diagnostics.pose_convergence_tol = diagnostics.positive("pose_convergence_tol");
+  p.diagnostics.ang_convergence_tol = diagnostics.positive("ang_convergence_tol"); 
   return p;
 }
 

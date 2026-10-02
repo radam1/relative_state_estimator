@@ -131,6 +131,23 @@ std::string fixed(double v, int digits) {
   return os.str();
 }
 
+std::string generate_convergence_report(const std::vector<double> v, const std::vector<double> t, const double& convergence_tolerance, const bool evaluating_pose){
+  if (v.empty()) return "NaN";
+  for (std::size_t i = 0; i < v.size() && i < t.size(); ++i) {
+    if (v[i] < convergence_tolerance) {
+      if (evaluating_pose){
+        return " Converged to " + fixed(convergence_tolerance, 3) + "m in " + fixed(t[i], 3)+"s";
+      }
+      else{
+        return " Converged to " + fixed(convergence_tolerance, 3) + "deg in " + fixed(t[i], 3)+"s";
+      }
+    }
+  }
+  // if it has gone through the for loop and not returned anything, 
+  // it has not converged to within tolerance
+  return "NEVER CONVERGED TO " + std::to_string(convergence_tolerance);
+}
+
 // Three stacked panels (x/y/z or roll/pitch/yaw) of the estimate, with the
 // ground truth dashed on top when there is any.
 void plot_estimate_vs_truth(const std::string& title, const std::vector<double>& t, const Triple& estimate,
@@ -178,7 +195,7 @@ void save_figure(const fs::path& file, bool keep_open) {
 // Setup
 // =============================================================================
 TestPlotter::TestPlotter(const UwbImuEkfParams& params, const std::string& output_dir)
-    : drone_names_(params.drone_names), output_dir_(output_dir), show_(params.plot.show) {
+    : drone_names_(params.drone_names), output_dir_(output_dir), show_(params.plot.show), pose_convergence_tol_(params.diagnostics.pose_convergence_tol), ang_convergence_tol_(params.diagnostics.ang_convergence_tol)  {
   // Same layout as the filter, so the state indices match the log.
   layout_.n_drones = static_cast<int>(params.drones.size());
   layout_.with_bias = params.filter.estimate_imu_bias;
@@ -222,9 +239,11 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
   if (have_truth) {
     const double pos_rms = rms(s.pos_error);
     const double att_rms = rms(s.att_error_deg);
+    const std::string pose_convergence_report = generate_convergence_report(s.pos_error, s.t_truth, pose_convergence_tol_, true); 
+    const std::string angular_convergence_report = generate_convergence_report(s.att_error_deg, s.t_truth, ang_convergence_tol_, false); 
     std::cout << "  " << std::left << std::setw(20) << body.title << std::right << "  position RMS "
-              << fixed(pos_rms, 3) << " m   attitude RMS " << fixed(att_rms, 2) << " deg\n";
-
+              << fixed(pos_rms, 3) << " m   attitude RMS " << fixed(att_rms, 2) << " deg | "  
+              << pose_convergence_report << " | " << angular_convergence_report << "\n";
     plt::figure_size(1000, 600);
     plt::subplot(2, 1, 1);
     plt::plot(s.t_truth, s.pos_error, "b-");

@@ -75,6 +75,11 @@ struct PlotParams {
   std::string output_folder;  // folder the plots are saved to
 };
 
+struct DiagnosticsParams {
+  double pose_convergence_tol = 0.1; // [m] At what level of accuracy the filter is said to have "Converged" for a given drone
+  double ang_convergence_tol = 5;    // [deg] 
+};
+
 struct UwbImuEkfParams {
   std::vector<std::string> drone_names;  // index order, same as `drones`
   PhysicsParams physics;
@@ -85,6 +90,7 @@ struct UwbImuEkfParams {
   ProcessNoise process_noise;
   MeasurementNoise measurement_noise;
   PlotParams plot;
+  DiagnosticsParams diagnostics; 
 };
 
 // Load and validate the whole params file.

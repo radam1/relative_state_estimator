@@ -57,6 +57,9 @@ class TestPlotter {
   std::vector<std::string> drone_names_;
   std::string output_dir_;
   bool show_;
+
+  double pose_convergence_tol_; 
+  double ang_convergence_tol_; 
 };
 
 }  // namespace flycrane
