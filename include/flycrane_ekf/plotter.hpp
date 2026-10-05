@@ -8,8 +8,12 @@
 //     orientation.png              roll, pitch, yaw: estimate vs ground truth
 //     position_covariance.png      1-sigma of x, y, z over time
 //     orientation_covariance.png   1-sigma of roll, pitch, yaw over time
-// Ground-truth curves and overall_error.png are skipped for a body without
-// ground truth (e.g. the payload, when the dataset has no payload.csv).
+//   overall/
+//     box_plots.png                position error norm and attitude error angle
+//                                  of every body after it converges, as box plots
+// Ground-truth curves, overall_error.png and the body's boxes are skipped for
+// a body without ground truth (e.g. the payload, when the dataset has no
+// payload.csv).
 
 #include <string>
 #include <vector>
@@ -39,7 +43,7 @@ class TestPlotter {
 
   // Write every figure of the run.  With `plot.show: true` in the params the
   // figures are also opened in windows at the end.
-  void plot_test(const std::vector<LogEntry>& log) const;
+  void plot_test(const std::vector<LogEntry>& log);
 
  private:
   // One body to plot: where its states are and where its figures go.
@@ -51,7 +55,8 @@ class TestPlotter {
     int drone;           // drone index, or -1 for the payload
   };
 
-  void plot_body(const std::vector<LogEntry>& log, const Body& body) const;
+  void plot_body(const std::vector<LogEntry>& log, const Body& body);
+  void plot_box_plots(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const;
 
   StateLayout layout_;
   std::vector<std::string> drone_names_;
@@ -60,6 +65,8 @@ class TestPlotter {
 
   double pose_convergence_tol_; 
   double ang_convergence_tol_; 
+  std::vector<double> all_covariances_;
+  int all_covariance_idx_;  
 };
 
 }  // namespace flycrane

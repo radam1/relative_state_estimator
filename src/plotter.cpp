@@ -30,6 +30,8 @@ Plot folder outputs:
 -------Orientation(Estimated vs Ground Truth)
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
+----overall
+-------Box_Plots(Position and Attitude Error of every Body)
 */
 
 #include "flycrane_ekf/plotter.hpp"
@@ -40,6 +42,7 @@ Plot folder outputs:
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 #include <Eigen/Dense>
 
@@ -131,21 +134,68 @@ std::string fixed(double v, int digits) {
   return os.str();
 }
 
+// Index of the first error sample below the tolerance, i.e. where the estimate
+// counts as converged, or v.size() if it never gets there.
+std::size_t convergence_index(const std::vector<double>& v, double convergence_tolerance) {
+  for (std::size_t i = 0; i < v.size(); ++i) {
+    if (v[i] < convergence_tolerance) return i;
+  }
+  return v.size();
+}
+
 std::string generate_convergence_report(const std::vector<double> v, const std::vector<double> t, const double& convergence_tolerance, const bool evaluating_pose){
   if (v.empty()) return "NaN";
-  for (std::size_t i = 0; i < v.size() && i < t.size(); ++i) {
-    if (v[i] < convergence_tolerance) {
-      if (evaluating_pose){
-        return " Converged to " + fixed(convergence_tolerance, 3) + "m in " + fixed(t[i], 3)+"s";
-      }
-      else{
-        return " Converged to " + fixed(convergence_tolerance, 3) + "deg in " + fixed(t[i], 3)+"s";
-      }
+  const std::size_t i = convergence_index(v, convergence_tolerance);
+  if (i < v.size() && i < t.size()) {
+    if (evaluating_pose){
+      return " Converged to " + fixed(convergence_tolerance, 3) + "m in " + fixed(t[i], 3)+"s";
+    }
+    else{
+      return " Converged to " + fixed(convergence_tolerance, 3) + "deg in " + fixed(t[i], 3)+"s";
     }
   }
-  // if it has gone through the for loop and not returned anything, 
   // it has not converged to within tolerance
   return "NEVER CONVERGED TO " + std::to_string(convergence_tolerance);
+}
+
+// One error series of one body, for the box plots.
+struct ErrorSeries {
+  std::string name;              // e.g. "Drone1"
+  std::vector<double> t;         // log times with ground truth
+  std::vector<double> error;     // error at those times
+};
+
+// Box plot (in the current subplot) of each body's error from its convergence
+// on, i.e. without the initial transient.  Bodies that never converge get no
+// box and are listed in the title instead.
+void plot_converged_boxes(const std::vector<ErrorSeries>& bodies, double convergence_tolerance,
+                          const std::string& title, const std::string& unit) {
+  std::vector<std::vector<double>> boxes;
+  std::vector<std::string> labels;
+  std::string never_converged;
+  for (const ErrorSeries& b : bodies) {
+    const std::size_t i = convergence_index(b.error, convergence_tolerance);
+    if (i >= b.error.size()) {
+      never_converged += (never_converged.empty() ? "" : ", ") + b.name;
+      continue;
+    }
+    boxes.emplace_back(b.error.begin() + static_cast<std::ptrdiff_t>(i), b.error.end());
+    labels.push_back(b.name + "\n(from " + fixed(b.t[i], 2) + " s)");
+  }
+
+  // Boxes sit at x = 1..N.  The labels are set with xticks instead of
+  // boxplot's own labels kwarg, which newer matplotlib renamed to tick_labels.
+  if (!boxes.empty()) {
+    std::vector<double> ticks;
+    for (std::size_t k = 0; k < boxes.size(); k++) ticks.push_back(static_cast<double>(k + 1));
+    plt::boxplot(boxes);
+    plt::xticks(ticks, labels);
+  }
+  plt::ylabel(title + " [" + unit + "]");
+  plt::grid(true);
+  std::string full_title = title + " after convergence to " + fixed(convergence_tolerance, 3) + " " + unit;
+  if (!never_converged.empty()) full_title += " (never converged: " + never_converged + ")";
+  plt::title(full_title);
 }
 
 // Three stacked panels (x/y/z or roll/pitch/yaw) of the estimate, with the
@@ -195,7 +245,13 @@ void save_figure(const fs::path& file, bool keep_open) {
 // Setup
 // =============================================================================
 TestPlotter::TestPlotter(const UwbImuEkfParams& params, const std::string& output_dir)
-    : drone_names_(params.drone_names), output_dir_(output_dir), show_(params.plot.show), pose_convergence_tol_(params.diagnostics.pose_convergence_tol), ang_convergence_tol_(params.diagnostics.ang_convergence_tol)  {
+    : drone_names_(params.drone_names), 
+      output_dir_(output_dir), 
+      show_(params.plot.show), 
+      pose_convergence_tol_(params.diagnostics.pose_convergence_tol), 
+      ang_convergence_tol_(params.diagnostics.ang_convergence_tol),
+      all_covariances_(8),
+      all_covariance_idx_(0)  {
   // Same layout as the filter, so the state indices match the log.
   layout_.n_drones = static_cast<int>(params.drones.size());
   layout_.with_bias = params.filter.estimate_imu_bias;
@@ -204,7 +260,7 @@ TestPlotter::TestPlotter(const UwbImuEkfParams& params, const std::string& outpu
 // =============================================================================
 // Plotting
 // =============================================================================
-void TestPlotter::plot_test(const std::vector<LogEntry>& log) const {
+void TestPlotter::plot_test(const std::vector<LogEntry>& log) {
   if (log.empty()) {
     std::cout << "plotter: the log is empty, nothing to plot\n";
     return;
@@ -224,11 +280,17 @@ void TestPlotter::plot_test(const std::vector<LogEntry>& log) const {
 
   std::cout << "\nplots: " << output_dir_ << '\n';
   for (const Body& body : bodies) plot_body(log, body);
+  for (std::size_t i = 0; i < all_covariances_.size(); ++i) {
+    if (i > 0) std::cout << ", ";
+    std::cout << all_covariances_[i];
+  }
+  std::cout << "\n";
+  plot_box_plots(log, bodies);
 
   if (show_) plt::show();
 }
 
-void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) const {
+void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) {
   const fs::path folder = fs::path(output_dir_) / body.folder;
   fs::create_directories(folder);
 
@@ -239,6 +301,10 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
   if (have_truth) {
     const double pos_rms = rms(s.pos_error);
     const double att_rms = rms(s.att_error_deg);
+    all_covariances_[all_covariance_idx_] = pos_rms; 
+    all_covariances_[all_covariance_idx_+1] = att_rms; 
+    all_covariance_idx_ += 2; 
+
     const std::string pose_convergence_report = generate_convergence_report(s.pos_error, s.t_truth, pose_convergence_tol_, true); 
     const std::string angular_convergence_report = generate_convergence_report(s.att_error_deg, s.t_truth, ang_convergence_tol_, false); 
     std::cout << "  " << std::left << std::setw(20) << body.title << std::right << "  position RMS "
@@ -272,6 +338,29 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
   save_figure(folder / "position_covariance.png", show_);
   plot_sigma(body.title + " orientation 1-sigma", s.t, s.att_sigma_deg, kAngleNames, "deg");
   save_figure(folder / "orientation_covariance.png", show_);
+}
+
+void TestPlotter::plot_box_plots(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const {
+  // The error series of every body with ground truth.
+  std::vector<ErrorSeries> pos_errors;
+  std::vector<ErrorSeries> att_errors_deg;
+  for (const Body& body : bodies) {
+    BodySeries s = extract_series(log, body.pos_index, body.att_index, body.drone);
+    if (s.t_truth.empty()) continue;
+    pos_errors.push_back({body.folder, s.t_truth, std::move(s.pos_error)});
+    att_errors_deg.push_back({body.folder, std::move(s.t_truth), std::move(s.att_error_deg)});
+  }
+  if (pos_errors.empty()) return;
+
+  const fs::path folder = fs::path(output_dir_) / "overall";
+  fs::create_directories(folder);
+
+  plt::figure_size(1000, 800);
+  plt::subplot(2, 1, 1);
+  plot_converged_boxes(pos_errors, pose_convergence_tol_, "position error", "m");
+  plt::subplot(2, 1, 2);
+  plot_converged_boxes(att_errors_deg, ang_convergence_tol_, "attitude error", "deg");
+  save_figure(folder / "box_plots.png", show_);
 }
 
 }  // namespace flycrane
