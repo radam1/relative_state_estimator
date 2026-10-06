@@ -71,6 +71,7 @@ struct MeasurementNoise {
 
 struct PlotParams {
   bool enabled = true;
+  bool save_plots = true; 
   bool show = false;
   std::string output_folder;  // folder the plots are saved to
 };
@@ -78,6 +79,8 @@ struct PlotParams {
 struct DiagnosticsParams {
   double pose_convergence_tol = 0.1; // [m] At what level of accuracy the filter is said to have "Converged" for a given drone
   double ang_convergence_tol = 5;    // [deg] 
+  bool display_splay = false;        // Whether or not to plot and output splay angles
+  double splay_vertical_tol = 5.0;   // [deg] cable splay below this counts as near-vertical (weak observability)
 };
 
 struct UwbImuEkfParams {

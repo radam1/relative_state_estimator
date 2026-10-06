@@ -12,18 +12,21 @@ Plot folder outputs:
 -------Orientation(Estimated vs Ground Truth)
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
+-------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
 ----Drone2
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
 -------Orientation(Estimated vs Ground Truth)
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
+-------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
 ----Drone3
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
 -------Orientation(Estimated vs Ground Truth)
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
+-------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
 ----Payload
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
@@ -36,6 +39,7 @@ Plot folder outputs:
 
 #include "flycrane_ekf/plotter.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <filesystem>
@@ -119,6 +123,60 @@ BodySeries extract_series(const std::vector<LogEntry>& log, int pos_index, int a
     s.att_error_deg.push_back(so3_log(R_est.transpose() * R_truth).norm() * kRadToDeg);
   }
   return s;
+}
+
+// Ground-truth cable angles of every drone, at the log times that have both
+// drone and payload ground truth.  These are the scalars the observability
+// analysis (docs/CAMLS_Range_Based_Observability_Analysis.pdf, Table 1) ties
+// to the rank: vertical cables lose observability.
+struct CableAngleSeries {
+  std::vector<double> t;
+  std::vector<std::vector<double>> splay_deg;         // [drone][sample] cable vs world vertical
+  std::vector<std::vector<double>> thrust_cable_deg;  // [drone][sample] drone body z vs cable
+};
+
+// Angle between two vectors.  Unlike acos of the normalised dot product it
+// stays accurate near 0, which is where the cables matter most.
+double angle_between(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
+  return std::atan2(a.cross(b).norm(), a.dot(b));
+}
+
+CableAngleSeries extract_cable_angles(const std::vector<LogEntry>& log, const std::vector<Eigen::Vector3d>& rho,
+                                      const std::vector<Eigen::Vector3d>& hook) {
+  const std::size_t n_drones = rho.size();
+  CableAngleSeries s;
+  s.splay_deg.resize(n_drones);
+  s.thrust_cable_deg.resize(n_drones);
+  for (const LogEntry& entry : log) {
+    if (!entry.drone_truth_valid || !entry.payload_truth_valid) continue;
+    const PoseSample& payload = entry.payload_truth;
+    const Eigen::Matrix3d R_L = payload.q.toRotationMatrix();
+    s.t.push_back(entry.t_s);
+    for (std::size_t i = 0; i < n_drones; i++) {
+      const PoseSample& drone = entry.drone_truth[i];
+      const Eigen::Matrix3d R_i = drone.q.toRotationMatrix();
+      // From the payload attach point up to the drone hook (minus Cable::e),
+      // so a taut hanging cable points along +z, the same way as the thrust.
+      const Eigen::Vector3d cable = drone.p + R_i * hook[i] - payload.p - R_L * rho[i];
+      s.splay_deg[i].push_back(angle_between(cable, Eigen::Vector3d::UnitZ()) * kRadToDeg);
+      s.thrust_cable_deg[i].push_back(angle_between(R_i.col(2), cable) * kRadToDeg);
+    }
+  }
+  return s;
+}
+
+double mean(const std::vector<double>& v) {
+  if (v.empty()) return 0.0;
+  double sum = 0.0;
+  for (double e : v) sum += e;
+  return sum / static_cast<double>(v.size());
+}
+
+// Percentage of the samples below the threshold.
+double percent_below(const std::vector<double>& v, double threshold) {
+  if (v.empty()) return 0.0;
+  const auto n = std::count_if(v.begin(), v.end(), [threshold](double e) { return e < threshold; });
+  return 100.0 * static_cast<double>(n) / static_cast<double>(v.size());
 }
 
 double rms(const std::vector<double>& v) {
@@ -247,14 +305,21 @@ void save_figure(const fs::path& file, bool keep_open) {
 TestPlotter::TestPlotter(const UwbImuEkfParams& params, const std::string& output_dir)
     : drone_names_(params.drone_names), 
       output_dir_(output_dir), 
-      show_(params.plot.show), 
+      show_(params.plot.show),
+      save_plots_(params.plot.save_plots),
       pose_convergence_tol_(params.diagnostics.pose_convergence_tol), 
       ang_convergence_tol_(params.diagnostics.ang_convergence_tol),
+      splay_vertical_tol_(params.diagnostics.splay_vertical_tol),
       all_covariances_(8),
-      all_covariance_idx_(0)  {
+      all_covariance_idx_(0),
+      display_splay_(params.diagnostics.display_splay)  {
   // Same layout as the filter, so the state indices match the log.
   layout_.n_drones = static_cast<int>(params.drones.size());
   layout_.with_bias = params.filter.estimate_imu_bias;
+  for (const DroneParams& drone : params.drones) {
+    attach_points_.push_back(drone.attach_point_payload);
+    hook_offsets_.push_back(drone.hook_offset);
+  }
 }
 
 // =============================================================================
@@ -285,14 +350,21 @@ void TestPlotter::plot_test(const std::vector<LogEntry>& log) {
     std::cout << all_covariances_[i];
   }
   std::cout << "\n";
-  plot_box_plots(log, bodies);
-
+  if (display_splay_) {
+    plot_cable_angles(log, bodies); 
+  }
+  if (save_plots_){
+    plot_box_plots(log, bodies);
+  }
+  
   if (show_) plt::show();
 }
 
 void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) {
   const fs::path folder = fs::path(output_dir_) / body.folder;
-  fs::create_directories(folder);
+  if (save_plots_){
+    fs::create_directories(folder);
+  }
 
   const BodySeries s = extract_series(log, body.pos_index, body.att_index, body.drone);
   const bool have_truth = !s.t_truth.empty();
@@ -310,34 +382,38 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
     std::cout << "  " << std::left << std::setw(20) << body.title << std::right << "  position RMS "
               << fixed(pos_rms, 3) << " m   attitude RMS " << fixed(att_rms, 2) << " deg | "  
               << pose_convergence_report << " | " << angular_convergence_report << "\n";
-    plt::figure_size(1000, 600);
-    plt::subplot(2, 1, 1);
-    plt::plot(s.t_truth, s.pos_error, "b-");
-    plt::ylabel("position error [m]");
-    plt::grid(true);
-    plt::title(body.title + " overall error (RMS " + fixed(pos_rms, 3) + " m, " + fixed(att_rms, 2) + " deg)");
-    plt::subplot(2, 1, 2);
-    plt::plot(s.t_truth, s.att_error_deg, "b-");
-    plt::ylabel("attitude error [deg]");
-    plt::xlabel("time [s]");
-    plt::grid(true);
-    save_figure(folder / "overall_error.png", show_);
+    if (save_plots_) {
+      plt::figure_size(1000, 600);
+      plt::subplot(2, 1, 1);
+      plt::plot(s.t_truth, s.pos_error, "b-");
+      plt::ylabel("position error [m]");
+      plt::grid(true);
+      plt::title(body.title + " overall error (RMS " + fixed(pos_rms, 3) + " m, " + fixed(att_rms, 2) + " deg)");
+      plt::subplot(2, 1, 2);
+      plt::plot(s.t_truth, s.att_error_deg, "b-");
+      plt::ylabel("attitude error [deg]");
+      plt::xlabel("time [s]");
+      plt::grid(true);
+      save_figure(folder / "overall_error.png", show_);
+    }
   } else {
     std::cout << "  " << std::left << std::setw(20) << body.title << std::right
               << "  no ground truth -- estimate and sigma only\n";
   }
+  
+  if (save_plots_) {
+    // Position and Orientation: estimated vs ground truth
+    plot_estimate_vs_truth(body.title + " position", s.t, s.pos, s.t_truth, s.pos_truth, kAxisNames, "m");
+    save_figure(folder / "position.png", show_);
+    plot_estimate_vs_truth(body.title + " orientation", s.t, s.att_deg, s.t_truth, s.att_truth_deg, kAngleNames, "deg");
+    save_figure(folder / "orientation.png", show_);
 
-  // Position and Orientation: estimated vs ground truth
-  plot_estimate_vs_truth(body.title + " position", s.t, s.pos, s.t_truth, s.pos_truth, kAxisNames, "m");
-  save_figure(folder / "position.png", show_);
-  plot_estimate_vs_truth(body.title + " orientation", s.t, s.att_deg, s.t_truth, s.att_truth_deg, kAngleNames, "deg");
-  save_figure(folder / "orientation.png", show_);
-
-  // Position_Covariances and Orientation_Covariances: 1-sigma over time
-  plot_sigma(body.title + " position 1-sigma", s.t, s.pos_sigma, kAxisNames, "m");
-  save_figure(folder / "position_covariance.png", show_);
-  plot_sigma(body.title + " orientation 1-sigma", s.t, s.att_sigma_deg, kAngleNames, "deg");
-  save_figure(folder / "orientation_covariance.png", show_);
+    // Position_Covariances and Orientation_Covariances: 1-sigma over time
+    plot_sigma(body.title + " position 1-sigma", s.t, s.pos_sigma, kAxisNames, "m");
+    save_figure(folder / "position_covariance.png", show_);
+    plot_sigma(body.title + " orientation 1-sigma", s.t, s.att_sigma_deg, kAngleNames, "deg");
+    save_figure(folder / "orientation_covariance.png", show_);
+  }
 }
 
 void TestPlotter::plot_box_plots(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const {
@@ -353,14 +429,61 @@ void TestPlotter::plot_box_plots(const std::vector<LogEntry>& log, const std::ve
   if (pos_errors.empty()) return;
 
   const fs::path folder = fs::path(output_dir_) / "overall";
-  fs::create_directories(folder);
 
-  plt::figure_size(1000, 800);
-  plt::subplot(2, 1, 1);
-  plot_converged_boxes(pos_errors, pose_convergence_tol_, "position error", "m");
-  plt::subplot(2, 1, 2);
-  plot_converged_boxes(att_errors_deg, ang_convergence_tol_, "attitude error", "deg");
-  save_figure(folder / "box_plots.png", show_);
+  if (save_plots_){
+    fs::create_directories(folder);
+
+    plt::figure_size(1000, 800);
+    plt::subplot(2, 1, 1);
+    plot_converged_boxes(pos_errors, pose_convergence_tol_, "position error", "m");
+    plt::subplot(2, 1, 2);
+    plot_converged_boxes(att_errors_deg, ang_convergence_tol_, "attitude error", "deg");
+    save_figure(folder / "box_plots.png", show_);
+  }
+}
+
+void TestPlotter::plot_cable_angles(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const {
+  std::cout << "\ncable angles (ground truth):\n";
+  const CableAngleSeries s = extract_cable_angles(log, attach_points_, hook_offsets_);
+  if (s.t.empty()) {
+    std::cout << "  no drone + payload ground truth -- skipped\n";
+    return;
+  }
+
+  // Every drone has a sample at every time in s.t, so the mean of the
+  // per-drone means is also the mean over all drones and times.
+  double splay_mean_sum = 0.0;
+  double thrust_cable_mean_sum = 0.0;
+  int n_drones = 0;
+  for (const Body& body : bodies) {
+    if (body.drone < 0) continue;
+    const std::vector<double>& splay = s.splay_deg[body.drone];
+    const std::vector<double>& thrust_cable = s.thrust_cable_deg[body.drone];
+    const double splay_mean = mean(splay);
+    const double thrust_cable_mean = mean(thrust_cable);
+    splay_mean_sum += splay_mean;
+    thrust_cable_mean_sum += thrust_cable_mean;
+    n_drones++;
+    
+    std::cout << "  " << std::left << std::setw(20) << body.title << std::right << "  splay mean "
+              << fixed(splay_mean, 2) << " deg, min " << fixed(*std::min_element(splay.begin(), splay.end()), 2)
+              << " deg, " << fixed(percent_below(splay, splay_vertical_tol_), 1) << " % below "
+              << fixed(splay_vertical_tol_, 1) << " deg | thrust-cable mean " << fixed(thrust_cable_mean, 2)
+              << " deg, min " << fixed(*std::min_element(thrust_cable.begin(), thrust_cable.end()), 2) << " deg\n";
+    if (save_plots_){
+      plt::figure_size(1000, 400);
+      plt::plot(s.t, thrust_cable, "b-");
+      plt::ylabel("thrust axis vs cable [deg]");
+      plt::xlabel("time [s]");
+      plt::grid(true);
+      plt::title(body.title + " angle between thrust axis and cable (mean " + fixed(thrust_cable_mean, 2) + " deg)");
+      save_figure(fs::path(output_dir_) / body.folder / "thrust_cable_angle.png", show_);
+    }
+  }
+  if (n_drones == 0) return;
+  std::cout << "  " << std::left << std::setw(20) << "all drones" << std::right << "  splay mean "
+            << fixed(splay_mean_sum / n_drones, 2) << " deg | thrust-cable mean "
+            << fixed(thrust_cable_mean_sum / n_drones, 2) << " deg\n";
 }
 
 }  // namespace flycrane

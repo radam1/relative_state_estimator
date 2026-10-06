@@ -38,7 +38,7 @@ drone_geometry:
     uwb_antenna: [-0.09, -0.05, 0.04]
 
 filter:
-  estimate_imu_bias: false      # Whether or not to include the bias estimation
+  estimate_imu_bias: true       # Whether or not to include the bias estimation
   anchor_drone: 0               # index of the "captain" drone
   max_integration_step: 0.001   # longest RK4 step time(in seconds)
   use_mocap: true
@@ -78,10 +78,13 @@ measurement_noise:
   mocap_att: 0.01       
 
 plot:
-  output_folder: "fscale3"
-  enabled: true
+  output_folder: "Fscale0_test1"
+  enabled: true         # plotting AND/OR diagnostic info
+  save_plots: false     # whether or not to save the plots
   show: false           # whether or not to auto-show plots
 
 diagnostics: 
   pose_convergence_tol: 0.15 # [m] At what level of accuracy the filter is said to have "Converged" for a given drone
   ang_convergence_tol: 5.0  # [deg] 
+  display_splay: true 
+  splay_vertical_tol: 5.0   # [deg] a cable splayed less than this from vertical counts as near-vertical (drone yaw weakly observable)

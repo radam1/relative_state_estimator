@@ -204,12 +204,15 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
 
   const Section plot = root.sub("plot");
   p.plot.enabled = plot.flag("enabled");
+  p.plot.save_plots = plot.flag("save_plots");
   p.plot.show = plot.flag("show");
   p.plot.output_folder = plot.text("output_folder");
 
   const Section diagnostics = root.sub("diagnostics");
   p.diagnostics.pose_convergence_tol = diagnostics.positive("pose_convergence_tol");
   p.diagnostics.ang_convergence_tol = diagnostics.positive("ang_convergence_tol"); 
+  p.diagnostics.display_splay = diagnostics.flag("display_splay"); 
+  p.diagnostics.splay_vertical_tol = diagnostics.non_negative("splay_vertical_tol");
   return p;
 }
 

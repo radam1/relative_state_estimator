@@ -8,15 +8,22 @@
 //     orientation.png              roll, pitch, yaw: estimate vs ground truth
 //     position_covariance.png      1-sigma of x, y, z over time
 //     orientation_covariance.png   1-sigma of roll, pitch, yaw over time
+//     thrust_cable_angle.png       (drones only) angle between the thrust axis
+//                                  and the cable, from ground truth
 //   overall/
 //     box_plots.png                position error norm and attitude error angle
 //                                  of every body after it converges, as box plots
 // Ground-truth curves, overall_error.png and the body's boxes are skipped for
 // a body without ground truth (e.g. the payload, when the dataset has no
 // payload.csv).
+//
+// The cable angles (splay from vertical and thrust axis vs cable) come from
+// the drone and payload ground truth, so they are skipped without payload.csv.
 
 #include <string>
 #include <vector>
+
+#include <Eigen/Dense>
 
 #include "flycrane_ekf/dynamics.hpp"
 #include "flycrane_ekf/ekf.hpp"
@@ -57,16 +64,22 @@ class TestPlotter {
 
   void plot_body(const std::vector<LogEntry>& log, const Body& body);
   void plot_box_plots(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const;
+  void plot_cable_angles(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const;
 
   StateLayout layout_;
   std::vector<std::string> drone_names_;
   std::string output_dir_;
   bool show_;
+  bool save_plots_; 
 
   double pose_convergence_tol_; 
   double ang_convergence_tol_; 
+  double splay_vertical_tol_;                   // [deg]
+  std::vector<Eigen::Vector3d> attach_points_;  // rho_i, payload frame
+  std::vector<Eigen::Vector3d> hook_offsets_;   // d_i, drone body frame
   std::vector<double> all_covariances_;
   int all_covariance_idx_;  
+  bool display_splay_;
 };
 
 }  // namespace flycrane
