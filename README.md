@@ -39,6 +39,14 @@ After the code has been built, the ekf test can be run with the command:
 
 Where `<csv_directory>` is the same as the `<desired_output_dir>` from the conversion command. 
 
+### Running an experiment
+An experiment JSON (e.g. `params/experiment_setup.json`) lists, per value of the tested variable, the bags (csv folders in `test_data/csv`) to run, the param file (in `params/`), the number of runs, the seed of each run (a list with one seed per run, or one integer `s` for seeds `s, s+1, ...`) and whether to save the plots:
+```
+./build/run_experiments params/experiment_setup.json --dry-run   # check the plan and the inputs
+./build/run_experiments params/experiment_setup.json
+```
+If a data folder or param file is missing, nothing runs. The results go to `results/<json name>/`: `results.csv` has one row per run with the position, velocity and attitude RMS error of every drone and the payload and the cable angle diagnostics, and the plots of run k go to `<experiment>/<bag>/run<k>_seed<s>/`. `--data-root`, `--params-dir` and `--output-dir` change the folders.
+
 ### Adjusting ekf parameters: 
 The parameters can be adjusted in `params/uwb_imu_ekf.yaml`. The most important sections for tuning are the filter and noise fields, but the plot field also allows for specifying a plot output folder. 
 

@@ -43,6 +43,8 @@ struct FilterParams {
   bool use_cable = true;
   double mocap_rate_hz = 50.0;
   double log_rate_hz = 50.0;
+  bool random_offset_seed = false;   // true: seed the initial offset generator from std::random_device
+  int generator_seed = 1;            // seed used when random_offset_seed is false
   double init_pose_offset = 0.0; 
   double init_ang_offset = 0.0; 
 };

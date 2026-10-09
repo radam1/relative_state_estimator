@@ -1,10 +1,14 @@
 #pragma once
 // Test of the EKF in this repository: replays a dataset converted by
 // bag_converter.py through the EKF and logs the estimate against ground truth
-// then plots the results
+// then plots the results.
+//
+// TestRunner is implemented in src/test_runner.cpp so that both run_ekf_test
+// (one dataset) and run_experiments (experiment_runner.hpp) can use it.
 
 #include <iostream>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 #include <random>
@@ -25,7 +29,15 @@ struct TestConfig {
     std::string config_path = "params/uwb_imu_ekf.yaml";
     std::string output_dir = "results";   // plots go to <output_dir>/<data folder name>/
     bool success = true;
+
+    // Optional overrides of the params YAML (used by the experiment runner).
+    // Left empty, the values in the YAML are used.
+    std::optional<int> seed;          // sets random_offset_seed = false, generator_seed = seed
+    std::optional<bool> save_plots;   // sets plot.save_plots
 };
+
+// Load the params YAML of a test and apply the overrides in the TestConfig.
+UwbImuEkfParams load_test_params(const TestConfig& config);
 
 // Accepted and rejected updates of one sensor, and the sum of their NIS.
 struct UpdateStats {

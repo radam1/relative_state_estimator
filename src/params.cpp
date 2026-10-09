@@ -172,6 +172,8 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
   p.filter.use_cable = filter.flag("use_cable");
   p.filter.mocap_rate_hz = filter.positive("mocap_rate_hz");
   p.filter.log_rate_hz = filter.positive("log_rate_hz");
+  p.filter.random_offset_seed = filter.flag("random_offset_seed");
+  p.filter.generator_seed = filter.integer("generator_seed");
   p.filter.init_pose_offset = filter.non_negative("init_pose_offset");
   p.filter.init_ang_offset = filter.non_negative("init_ang_offset");
 

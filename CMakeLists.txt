@@ -35,6 +35,8 @@ add_library(flycrane_ekf_standalone
   src/params.cpp
   src/dynamics.cpp
   src/ekf.cpp
+  src/run_metrics.cpp
+  src/test_runner.cpp
 )
 target_include_directories(flycrane_ekf_standalone PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(flycrane_ekf_standalone
@@ -65,8 +67,18 @@ if(HAVE_MATPLOTLIB)
   target_include_directories(run_ekf_test SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/matplotlib-cpp)
   target_link_libraries(run_ekf_test PRIVATE flycrane_ekf_standalone Python3::Python)
   target_compile_options(run_ekf_test PRIVATE -Wall -Wextra -Wpedantic)
+
+  # experiment runner 
+  add_library(flycrane_experiments STATIC src/experiment_runner.cpp src/plotter.cpp)
+  target_include_directories(flycrane_experiments SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/matplotlib-cpp)
+  target_link_libraries(flycrane_experiments PUBLIC flycrane_ekf_standalone Python3::Python PRIVATE ${YAML_CPP_TARGET})
+  target_compile_options(flycrane_experiments PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(run_experiments src/run_experiments.cpp)
+  target_link_libraries(run_experiments PRIVATE flycrane_experiments)
+  target_compile_options(run_experiments PRIVATE -Wall -Wextra -Wpedantic)
 else()
-  message(WARNING "run_ekf_test is NOT built: no Python with matplotlib found "
+  message(WARNING "run_ekf_test and run_experiments are NOT built: no Python with matplotlib found "
                   "(Python3_EXECUTABLE = '${Python3_EXECUTABLE}').  Re-run cmake with "
                   "-DPython3_EXECUTABLE=/path/to/python, e.g. /opt/anaconda3/bin/python")
 endif()
@@ -78,3 +90,12 @@ target_link_libraries(test_dynamics PRIVATE flycrane_ekf_standalone)
 target_compile_options(test_dynamics PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_dynamics
   COMMAND test_dynamics ${CMAKE_CURRENT_SOURCE_DIR}/params/uwb_imu_ekf.yaml)
+
+# experiment runner test
+if(HAVE_MATPLOTLIB)
+  add_executable(test_experiment_runner tests/test_experiment_runner.cpp)
+  target_link_libraries(test_experiment_runner PRIVATE flycrane_experiments ${YAML_CPP_TARGET})
+  target_compile_options(test_experiment_runner PRIVATE -Wall -Wextra -Wpedantic)
+  add_test(NAME test_experiment_runner
+    COMMAND test_experiment_runner ${CMAKE_CURRENT_SOURCE_DIR})
+endif()

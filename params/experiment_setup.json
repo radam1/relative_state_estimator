@@ -1,0 +1,141 @@
+{
+    "fscale3": {
+        "fscale3_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5],
+            "save_plots": false
+        },
+        "fscale3_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale3_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "fscale4":{ 
+        "fscale4_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale4_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale4_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }},
+    "fscale5": {
+        "fscale5_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale5_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale5_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "fscale6":{
+        "fscale6_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale6_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale6_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "fscale7":{
+        "fscale7_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "fscale8":{
+        "fscale8_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale8_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale8_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "fscale9":{
+        "fscale9_test1":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale9_test2":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale9_test3":{
+            "param_file": "uwb_imu_ekf.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    }
+}

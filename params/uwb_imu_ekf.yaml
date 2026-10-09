@@ -46,6 +46,8 @@ filter:
   use_cable: true
   mocap_rate_hz: 100.0          # anchor odom is subsampled to this rate
   log_rate_hz: 50.0             # rate at which estimates are logged for plotting
+  random_offset_seed: false     # choose whether or not to use a random seed for the generator
+  generator_seed: 1             # if random_offset_seed is false, this is the seed
   init_pose_offset: 0.3         # offset from ground truth of initial pose guess(applied in random direction)
   init_ang_offset: 5.0         # offset from ground truth of initial orientation guess(applied in random direction)
 
@@ -78,9 +80,9 @@ measurement_noise:
   mocap_att: 0.01       
 
 plot:
-  output_folder: "Fscale0_test1"
+  output_folder: "random_test_2"
   enabled: true         # plotting AND/OR diagnostic info
-  save_plots: false     # whether or not to save the plots
+  save_plots: true     # whether or not to save the plots
   show: false           # whether or not to auto-show plots
 
 diagnostics: 

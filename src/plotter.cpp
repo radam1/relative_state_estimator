@@ -38,6 +38,7 @@ Plot folder outputs:
 */
 
 #include "flycrane_ekf/plotter.hpp"
+#include "flycrane_ekf/run_metrics.hpp"
 
 #include <algorithm>
 #include <array>
@@ -125,66 +126,12 @@ BodySeries extract_series(const std::vector<LogEntry>& log, int pos_index, int a
   return s;
 }
 
-// Ground-truth cable angles of every drone, at the log times that have both
-// drone and payload ground truth.  These are the scalars the observability
-// analysis (docs/CAMLS_Range_Based_Observability_Analysis.pdf, Table 1) ties
-// to the rank: vertical cables lose observability.
-struct CableAngleSeries {
-  std::vector<double> t;
-  std::vector<std::vector<double>> splay_deg;         // [drone][sample] cable vs world vertical
-  std::vector<std::vector<double>> thrust_cable_deg;  // [drone][sample] drone body z vs cable
-};
-
-// Angle between two vectors.  Unlike acos of the normalised dot product it
-// stays accurate near 0, which is where the cables matter most.
-double angle_between(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
-  return std::atan2(a.cross(b).norm(), a.dot(b));
-}
-
-CableAngleSeries extract_cable_angles(const std::vector<LogEntry>& log, const std::vector<Eigen::Vector3d>& rho,
-                                      const std::vector<Eigen::Vector3d>& hook) {
-  const std::size_t n_drones = rho.size();
-  CableAngleSeries s;
-  s.splay_deg.resize(n_drones);
-  s.thrust_cable_deg.resize(n_drones);
-  for (const LogEntry& entry : log) {
-    if (!entry.drone_truth_valid || !entry.payload_truth_valid) continue;
-    const PoseSample& payload = entry.payload_truth;
-    const Eigen::Matrix3d R_L = payload.q.toRotationMatrix();
-    s.t.push_back(entry.t_s);
-    for (std::size_t i = 0; i < n_drones; i++) {
-      const PoseSample& drone = entry.drone_truth[i];
-      const Eigen::Matrix3d R_i = drone.q.toRotationMatrix();
-      // From the payload attach point up to the drone hook (minus Cable::e),
-      // so a taut hanging cable points along +z, the same way as the thrust.
-      const Eigen::Vector3d cable = drone.p + R_i * hook[i] - payload.p - R_L * rho[i];
-      s.splay_deg[i].push_back(angle_between(cable, Eigen::Vector3d::UnitZ()) * kRadToDeg);
-      s.thrust_cable_deg[i].push_back(angle_between(R_i.col(2), cable) * kRadToDeg);
-    }
-  }
-  return s;
-}
-
-double mean(const std::vector<double>& v) {
-  if (v.empty()) return 0.0;
-  double sum = 0.0;
-  for (double e : v) sum += e;
-  return sum / static_cast<double>(v.size());
-}
-
-// Percentage of the samples below the threshold.
-double percent_below(const std::vector<double>& v, double threshold) {
-  if (v.empty()) return 0.0;
-  const auto n = std::count_if(v.begin(), v.end(), [threshold](double e) { return e < threshold; });
-  return 100.0 * static_cast<double>(n) / static_cast<double>(v.size());
-}
-
-double rms(const std::vector<double>& v) {
-  if (v.empty()) return 0.0;
-  double sum_sq = 0.0;
-  for (double e : v) sum_sq += e * e;
-  return std::sqrt(sum_sq / static_cast<double>(v.size()));
-}
+// Shared with the experiment runner's results CSV (run_metrics.hpp).
+using metrics::CableAngleSeries;
+using metrics::extract_cable_angles;
+using metrics::mean;
+using metrics::percent_below;
+using metrics::rms;
 
 std::string fixed(double v, int digits) {
   std::ostringstream os;
