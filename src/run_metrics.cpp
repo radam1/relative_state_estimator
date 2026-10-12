@@ -61,6 +61,43 @@ CableAngleSeries extract_cable_angles(const std::vector<LogEntry>& log, const st
   return s;
 }
 
+std::vector<CableMeasurementSeries> extract_cable_measurements(const std::vector<LogEntry>& log,
+                                                               const std::vector<Eigen::Vector3d>& rho,
+                                                               const std::vector<Eigen::Vector3d>& hook) {
+  constexpr double kRadToDeg = 180.0 / M_PI;
+  const std::size_t n_drones = rho.size();
+  std::vector<CableMeasurementSeries> out(n_drones);
+  for (const LogEntry& entry : log) {
+    if (!entry.drone_truth_valid || !entry.payload_truth_valid) continue;
+    const PoseSample& payload = entry.payload_truth;
+    const Eigen::Matrix3d R_L = payload.q.toRotationMatrix();
+    for (std::size_t i = 0; i < n_drones; i++) {
+      if (i >= entry.cable.size() || !entry.cable_valid[i]) continue;
+      const PoseSample& drone = entry.drone_truth[i];
+      const Eigen::Matrix3d R_i = drone.q.toRotationMatrix();
+      // From the drone hook down to the payload attach point (Cable::e), in
+      // the drone body frame, as the EKF predicts the measurement.
+      const Eigen::Vector3d e = payload.p + R_L * rho[i] - drone.p - R_i * hook[i];
+      const Eigen::Vector3d s_truth = (R_i.transpose() * e).normalized();
+      const Eigen::Vector3d& s_meas = entry.cable[i].s_body;
+
+      CableMeasurementSeries& s = out[i];
+      s.t.push_back(entry.t_s);
+      for (int k = 0; k < 3; k++) {
+        s.s_meas[k].push_back(s_meas[k]);
+        s.s_truth[k].push_back(s_truth[k]);
+      }
+      // The thrust axis is body +z and the cable points down, so compare with -s.
+      s.tilt_meas_deg.push_back(angle_between(-s_meas, Eigen::Vector3d::UnitZ()) * kRadToDeg);
+      s.tilt_truth_deg.push_back(angle_between(-s_truth, Eigen::Vector3d::UnitZ()) * kRadToDeg);
+      s.dir_error_deg.push_back(angle_between(s_meas, s_truth) * kRadToDeg);
+      s.tension.push_back(entry.cable[i].tension);
+      s.tension_valid.push_back(entry.cable[i].tension_valid);
+    }
+  }
+  return out;
+}
+
 }  // namespace metrics
 
 namespace {
@@ -117,6 +154,7 @@ RunMetrics compute_run_metrics(const UwbImuEkfParams& params, const std::vector<
     hook.push_back(drone.hook_offset);
   }
   const metrics::CableAngleSeries s = metrics::extract_cable_angles(log, rho, hook);
+  const std::vector<metrics::CableMeasurementSeries> meas = metrics::extract_cable_measurements(log, rho, hook);
   for (int i = 0; i < layout.n_drones; i++) {
     CableMetrics c;
     c.name = "Drone" + std::to_string(i + 1);
@@ -132,6 +170,20 @@ RunMetrics compute_run_metrics(const UwbImuEkfParams& params, const std::vector<
     } else {
       c.splay_mean_deg = c.splay_min_deg = c.splay_below_tol_pct = kNaN;
       c.thrust_cable_mean_deg = c.thrust_cable_min_deg = kNaN;
+    }
+
+    const metrics::CableMeasurementSeries& cm = meas[i];
+    c.has_cable_meas = !cm.t.empty();
+    if (c.has_cable_meas) {
+      std::vector<double> tilt_diff(cm.t.size());
+      for (std::size_t k = 0; k < cm.t.size(); k++) tilt_diff[k] = cm.tilt_meas_deg[k] - cm.tilt_truth_deg[k];
+      c.cable_dir_err_mean_deg = metrics::mean(cm.dir_error_deg);
+      c.cable_dir_err_rms_deg = metrics::rms(cm.dir_error_deg);
+      c.cable_dir_err_max_deg = *std::max_element(cm.dir_error_deg.begin(), cm.dir_error_deg.end());
+      c.cable_tilt_bias_deg = metrics::mean(tilt_diff);
+    } else {
+      c.cable_dir_err_mean_deg = c.cable_dir_err_rms_deg = c.cable_dir_err_max_deg = kNaN;
+      c.cable_tilt_bias_deg = kNaN;
     }
     m.cables.push_back(c);
   }

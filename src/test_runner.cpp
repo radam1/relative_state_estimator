@@ -10,8 +10,11 @@ number of json-structured experiments.
 // includes
 #include "flycrane_ekf/run_ekf_test.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <iomanip>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <random>
@@ -25,6 +28,20 @@ namespace {
 // print a line to the console
 void print(const std::string& msg){
     std::cout<<msg<<"\n";
+}
+
+// The sample of a time-sorted cable stream nearest to t_ns, if it is within max_gap_ns.
+std::optional<CableSample> nearest_cable(const std::vector<CableSample>& stream, int64_t t_ns, int64_t max_gap_ns){
+    const auto after = std::lower_bound(stream.begin(), stream.end(), t_ns,
+                                        [](const CableSample& s, int64_t t){ return s.t_ns < t; });
+    auto best = stream.end();
+    if (after != stream.end()) best = after;
+    if (after != stream.begin()){
+        const auto before = std::prev(after);
+        if (best == stream.end() || t_ns - before->t_ns < best->t_ns - t_ns) best = before;
+    }
+    if (best == stream.end() || std::llabs(best->t_ns - t_ns) > max_gap_ns) return std::nullopt;
+    return *best;
 }
 
 }  // namespace
@@ -166,6 +183,18 @@ LogEntry TestRunner::make_log_entry() const {
     // ground truth of the payload at the time of the estimate
     const std::optional<PoseSample> payload_truth = io::interpolate(dataset_.payload, snapshot.t_ns);
 
+    // cable measurement of every drone nearest to the time of the estimate
+    const int64_t max_gap_ns = static_cast<int64_t>(std::llround(1e9 / params_.filter.log_rate_hz));
+    std::vector<CableSample> cable(n_drones);
+    std::vector<bool> cable_valid(n_drones, false);
+    for (size_t i=0; i<n_drones; i++){
+        const std::optional<CableSample> sample = nearest_cable(dataset_.drones[i].cable, snapshot.t_ns, max_gap_ns);
+        if (sample){
+            cable[i] = *sample;
+            cable_valid[i] = true;
+        }
+    }
+
     LogEntry entry;
     entry.t_s = dataset_.rel_s(snapshot.t_ns);
     entry.estimate = snapshot;
@@ -173,6 +202,8 @@ LogEntry TestRunner::make_log_entry() const {
     entry.drone_truth_valid = truth_valid;
     if (payload_truth) entry.payload_truth = *payload_truth;
     entry.payload_truth_valid = payload_truth.has_value();
+    entry.cable = cable;
+    entry.cable_valid = cable_valid;
     return entry;
 }
 

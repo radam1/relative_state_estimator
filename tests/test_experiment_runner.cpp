@@ -11,7 +11,7 @@
 //      metrics and different seeds do not, a broken bag is recorded as failed
 //      without stopping the other runs, save_plots decides whether plots are
 //      written to run<k>_seed<s>/, and the vertical synthetic cables give
-//      ~0 deg splay.
+//      ~0 deg splay and a measured cable direction ~0 deg from the truth.
 //
 //   test_experiment_runner [repo root]      (default: .)
 //
@@ -411,7 +411,8 @@ void check_end_to_end(const fs::path& repo, const fs::path& tmp) {
   }
   for (const std::string& drone : {"Drone1", "Drone2", "Drone3"}) {
     for (const std::string& m : {"_splay_mean_deg", "_splay_min_deg", "_splay_below_tol_pct",
-                                 "_thrust_cable_mean_deg", "_thrust_cable_min_deg"}) {
+                                 "_thrust_cable_mean_deg", "_thrust_cable_min_deg", "_cable_dir_err_mean_deg",
+                                 "_cable_dir_err_rms_deg", "_cable_dir_err_max_deg", "_cable_tilt_bias_deg"}) {
       metric_cols.push_back(drone + m);
     }
   }
@@ -468,12 +469,24 @@ void check_end_to_end(const fs::path& repo, const fs::path& tmp) {
   report("vertical cables: splay ~0, all near-vertical", vertical,
          "Drone1 splay " + csv.at(1, "Drone1_splay_mean_deg") + " deg");
 
+  // the synthetic wrench_observed direction (0, 0, -1) matches the vertical cables
+  bool meas_matches = true;
+  for (const std::string& drone : {"Drone1", "Drone2", "Drone3"}) {
+    meas_matches = meas_matches && std::stod(csv.at(1, drone + "_cable_dir_err_max_deg")) < 0.1 &&
+                   std::abs(std::stod(csv.at(1, drone + "_cable_tilt_bias_deg"))) < 0.1;
+  }
+  report("vertical cables: measured direction ~ truth", meas_matches,
+         "Drone1 dir error max " + csv.at(1, "Drone1_cable_dir_err_max_deg") + " deg");
+
   // save_plots from the JSON, not the YAML
   const fs::path root = runner.output_root();
   report("save_plots false: no plot folder", !fs::exists(root / "synthetic" / "synth_bag" / "run1_seed7"));
   report("save_plots true: plots in run1_seed3/",
          fs::exists(root / "plotted" / "synth_bag" / "run1_seed3" / "Drone1" / "overall_error.png") &&
              fs::exists(root / "plotted" / "synth_bag" / "run1_seed3" / "Payload" / "position.png"));
+  report("save_plots true: cable measurement plots written",
+         fs::exists(root / "plotted" / "synth_bag" / "run1_seed3" / "Drone1" / "cable_direction.png") &&
+             fs::exists(root / "plotted" / "synth_bag" / "run1_seed3" / "Drone1" / "cable_angle_error.png"));
 }
 
 }  // namespace

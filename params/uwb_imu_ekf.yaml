@@ -38,7 +38,7 @@ drone_geometry:
     uwb_antenna: [-0.09, -0.05, 0.04]
 
 filter:
-  estimate_gyro_bias: true      # estimate a gyro bias state per drone
+  estimate_gyro_bias: false      # estimate a gyro bias state per drone
   estimate_acc_bias: true       # estimate an accelerometer bias state per drone
   anchor_drone: 0               # index of the "captain" drone
   max_integration_step: 0.001   # longest RK4 step time(in seconds)
@@ -61,7 +61,7 @@ initial_sigma:
   drone_pos: 0.05       # [m]
   drone_vel: 0.1        # [m/s]
   drone_att: 0.05       # [rad]
-  gyro_bias: 0.01       # [rad/s]    
+  gyro_bias: 0.01       # [rad/s]
   acc_bias: 0.1         # [m/s^2]   
 
 # Continuous-time noise densities from sim.

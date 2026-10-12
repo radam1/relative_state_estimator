@@ -10,6 +10,12 @@
 //     orientation_covariance.png   1-sigma of roll, pitch, yaw over time
 //     thrust_cable_angle.png       (drones only) angle between the thrust axis
 //                                  and the cable, from ground truth
+//     cable_direction.png          (drones only) x, y, z of the measured
+//                                  (wrench_observed) cable direction in the body
+//                                  frame vs ground truth
+//     cable_angle_error.png        (drones only) measured vs true thrust-cable
+//                                  angle, the angle between the measured and
+//                                  true cable direction, and the measured tension
 //   overall/
 //     box_plots.png                position error norm and attitude error angle
 //                                  of every body after it converges, as box plots
@@ -19,6 +25,7 @@
 //
 // The cable angles (splay from vertical and thrust axis vs cable) come from
 // the drone and payload ground truth, so they are skipped without payload.csv.
+// The cable direction figures also need the drone's cable measurements.
 
 #include <string>
 #include <vector>
@@ -41,6 +48,8 @@ struct LogEntry {
   bool drone_truth_valid = false;       // false if the odom does not cover t
   PoseSample payload_truth{};           // interpolated payload.csv
   bool payload_truth_valid = false;     // false if payload.csv is absent or does not cover t
+  std::vector<CableSample> cable;       // wrench_observed sample nearest to t, one per drone
+  std::vector<bool> cable_valid;        // false if no cable sample within one log period of t
 };
 
 class TestPlotter {

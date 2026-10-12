@@ -13,6 +13,8 @@ Plot folder outputs:
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
 -------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
+-------Cable_Direction(wrench_observed vs ground truth cable direction, body frame)
+-------Cable_Angle_Error(measured vs true thrust-cable angle, direction error and measured tension)
 ----Drone2
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
@@ -20,6 +22,8 @@ Plot folder outputs:
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
 -------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
+-------Cable_Direction(wrench_observed vs ground truth cable direction, body frame)
+-------Cable_Angle_Error(measured vs true thrust-cable angle, direction error and measured tension)
 ----Drone3
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
@@ -27,6 +31,8 @@ Plot folder outputs:
 -------Position_Covariances(Evolution over Time)
 -------Orientation_Covariances(Evolution over Time)
 -------Thrust_Cable_Angle(Thrust axis vs cable direction over Time)
+-------Cable_Direction(wrench_observed vs ground truth cable direction, body frame)
+-------Cable_Angle_Error(measured vs true thrust-cable angle, direction error and measured tension)
 ----Payload
 -------Overall Plots(Overall Error for Position and Orientation)
 -------Position(Estimated vs Ground Truth)
@@ -71,6 +77,7 @@ using Triple = std::array<std::vector<double>, 3>;
 
 const std::array<std::string, 3> kAxisNames = {"x", "y", "z"};
 const std::array<std::string, 3> kAngleNames = {"roll", "pitch", "yaw"};
+const std::array<std::string, 3> kCableDirNames = {"s_x", "s_y", "s_z"};
 
 // Everything one body's figures need, pulled out of the log as plain vectors.
 struct BodySeries {
@@ -85,6 +92,8 @@ struct BodySeries {
   Triple att_truth_deg;              // [deg]
   std::vector<double> pos_error;     // |p_est - p_truth| [m]
   std::vector<double> att_error_deg; // angle of R_est^T R_truth [deg]
+  Triple pos_comp_error;             // p_est - p_truth per axis [m]
+  Triple att_comp_error_deg;         // Euler angle est - truth per axis, wrapped to [-180, 180] [deg]
 };
 
 BodySeries extract_series(const std::vector<LogEntry>& log, int pos_index, int att_index, int drone) {
@@ -114,6 +123,8 @@ BodySeries extract_series(const std::vector<LogEntry>& log, int pos_index, int a
     for (int k = 0; k < 3; k++) {
       s.pos_truth[k].push_back(truth->p[k]);
       s.att_truth_deg[k].push_back(euler_truth[k] * kRadToDeg);
+      s.pos_comp_error[k].push_back(x[pos_index + k] - truth->p[k]);
+      s.att_comp_error_deg[k].push_back(std::remainder(x[att_index + k] - euler_truth[k], 2.0 * M_PI) * kRadToDeg);
     }
 
     // Overall errors.  The attitude error is the rotation angle between the
@@ -128,7 +139,9 @@ BodySeries extract_series(const std::vector<LogEntry>& log, int pos_index, int a
 
 // Shared with the experiment runner's results CSV (run_metrics.hpp).
 using metrics::CableAngleSeries;
+using metrics::CableMeasurementSeries;
 using metrics::extract_cable_angles;
+using metrics::extract_cable_measurements;
 using metrics::mean;
 using metrics::percent_below;
 using metrics::rms;
@@ -203,20 +216,34 @@ void plot_converged_boxes(const std::vector<ErrorSeries>& bodies, double converg
   plt::title(full_title);
 }
 
+// Panel subtitles with the RMS error of each component, e.g. "x: RMS error 0.031 m".
+std::array<std::string, 3> rms_subtitles(const Triple& error, const std::array<std::string, 3>& names,
+                                         const std::string& unit, int digits) {
+  std::array<std::string, 3> subtitles;
+  for (int k = 0; k < 3; k++) subtitles[k] = names[k] + ": RMS error " + fixed(rms(error[k]), digits) + " " + unit;
+  return subtitles;
+}
+
 // Three stacked panels (x/y/z or roll/pitch/yaw) of the estimate, with the
-// ground truth dashed on top when there is any.
+// ground truth dashed on top when there is any.  With subtitles, the title
+// goes above the whole figure and each panel gets its subtitle.
 void plot_estimate_vs_truth(const std::string& title, const std::vector<double>& t, const Triple& estimate,
                             const std::vector<double>& t_truth, const Triple& truth,
-                            const std::array<std::string, 3>& names, const std::string& unit) {
+                            const std::array<std::string, 3>& names, const std::string& unit,
+                            const std::string& estimate_label = "estimate",
+                            const std::array<std::string, 3>& subtitles = {}) {
+  const bool with_subtitles = !subtitles[0].empty();
   plt::figure_size(1000, 800);
+  if (with_subtitles) plt::suptitle(title);
   for (int k = 0; k < 3; k++) {
     plt::subplot(3, 1, k + 1);
-    plt::named_plot("estimate", t, estimate[k], "b-");
+    plt::named_plot(estimate_label, t, estimate[k], "b-");
     if (!t_truth.empty()) plt::named_plot("ground truth", t_truth, truth[k], "k--");
     plt::ylabel(names[k] + " [" + unit + "]");
     plt::grid(true);
+    if (with_subtitles) plt::title(subtitles[k], {{"fontsize", "10"}});
     if (k == 0) {
-      plt::title(title);
+      if (!with_subtitles) plt::title(title);
       plt::legend();
     }
   }
@@ -350,10 +377,18 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
   }
   
   if (save_plots_) {
-    // Position and Orientation: estimated vs ground truth
-    plot_estimate_vs_truth(body.title + " position", s.t, s.pos, s.t_truth, s.pos_truth, kAxisNames, "m");
+    // Position and Orientation: estimated vs ground truth, with the RMS error
+    // of each component as the panel subtitle
+    std::array<std::string, 3> pos_subtitles, att_subtitles;
+    if (have_truth) {
+      pos_subtitles = rms_subtitles(s.pos_comp_error, kAxisNames, "m", 3);
+      att_subtitles = rms_subtitles(s.att_comp_error_deg, kAngleNames, "deg", 2);
+    }
+    plot_estimate_vs_truth(body.title + " position", s.t, s.pos, s.t_truth, s.pos_truth, kAxisNames, "m",
+                           "estimate", pos_subtitles);
     save_figure(folder / "position.png", show_);
-    plot_estimate_vs_truth(body.title + " orientation", s.t, s.att_deg, s.t_truth, s.att_truth_deg, kAngleNames, "deg");
+    plot_estimate_vs_truth(body.title + " orientation", s.t, s.att_deg, s.t_truth, s.att_truth_deg, kAngleNames,
+                           "deg", "estimate", att_subtitles);
     save_figure(folder / "orientation.png", show_);
 
     // Position_Covariances and Orientation_Covariances: 1-sigma over time
@@ -391,12 +426,13 @@ void TestPlotter::plot_box_plots(const std::vector<LogEntry>& log, const std::ve
 }
 
 void TestPlotter::plot_cable_angles(const std::vector<LogEntry>& log, const std::vector<Body>& bodies) const {
-  std::cout << "\ncable angles (ground truth):\n";
+  std::cout << "\ncable angles (ground truth, and wrench_observed vs ground truth):\n";
   const CableAngleSeries s = extract_cable_angles(log, attach_points_, hook_offsets_);
   if (s.t.empty()) {
     std::cout << "  no drone + payload ground truth -- skipped\n";
     return;
   }
+  const std::vector<CableMeasurementSeries> meas = extract_cable_measurements(log, attach_points_, hook_offsets_);
 
   // Every drone has a sample at every time in s.t, so the mean of the
   // per-drone means is also the mean over all drones and times.
@@ -426,6 +462,74 @@ void TestPlotter::plot_cable_angles(const std::vector<LogEntry>& log, const std:
       plt::grid(true);
       plt::title(body.title + " angle between thrust axis and cable (mean " + fixed(thrust_cable_mean, 2) + " deg)");
       save_figure(fs::path(output_dir_) / body.folder / "thrust_cable_angle.png", show_);
+    }
+
+    // measured (wrench_observed) cable direction against ground truth
+    const CableMeasurementSeries& m = meas[body.drone];
+    if (m.t.empty()) {
+      std::cout << "  " << std::left << std::setw(20) << body.title << std::right
+                << "  no cable measurement -- direction error skipped\n";
+      continue;
+    }
+    std::vector<double> tilt_diff(m.t.size());
+    for (std::size_t k = 0; k < m.t.size(); k++) tilt_diff[k] = m.tilt_meas_deg[k] - m.tilt_truth_deg[k];
+    const double dir_mean = mean(m.dir_error_deg);
+    const double dir_rms = rms(m.dir_error_deg);
+    const double tilt_bias = mean(tilt_diff);
+
+    // directions synthesised from geometry (no tension) are marked separately,
+    // and only measured tensions are plotted
+    std::vector<double> t_synth, err_synth, t_tension, tension;
+    for (std::size_t k = 0; k < m.t.size(); k++) {
+      if (m.tension_valid[k]) {
+        t_tension.push_back(m.t[k]);
+        tension.push_back(m.tension[k]);
+      } else {
+        t_synth.push_back(m.t[k]);
+        err_synth.push_back(m.dir_error_deg[k]);
+      }
+    }
+
+    std::cout << "  " << std::left << std::setw(20) << body.title << std::right << "  cable dir error mean "
+              << fixed(dir_mean, 2) << " deg, RMS " << fixed(dir_rms, 2) << " deg, max "
+              << fixed(*std::max_element(m.dir_error_deg.begin(), m.dir_error_deg.end()), 2) << " deg | tilt bias "
+              << (tilt_bias >= 0.0 ? "+" : "") << fixed(tilt_bias, 2) << " deg";
+    if (!t_synth.empty()) std::cout << " | " << t_synth.size() << " of " << m.t.size() << " synthesised";
+    std::cout << "\n";
+
+    if (save_plots_) {
+      const fs::path folder = fs::path(output_dir_) / body.folder;
+      plot_estimate_vs_truth(body.title + " cable direction, drone body frame (hook to payload)", m.t, m.s_meas,
+                             m.t, m.s_truth, kCableDirNames, "-", "wrench_observed");
+      save_figure(folder / "cable_direction.png", show_);
+
+      plt::figure_size(1000, 800);
+      plt::subplot(3, 1, 1);
+      plt::named_plot("wrench_observed", m.t, m.tilt_meas_deg, "b-");
+      plt::named_plot("ground truth", m.t, m.tilt_truth_deg, "k--");
+      plt::ylabel("thrust axis vs cable [deg]");
+      plt::grid(true);
+      plt::title(body.title + " measured vs true cable angle (tilt bias " + fixed(tilt_bias, 2) + " deg)");
+      plt::legend();
+      plt::subplot(3, 1, 2);
+      plt::plot(m.t, m.dir_error_deg, "b-");
+      if (!t_synth.empty()) {
+        plt::named_plot("synthesised (no tension)", t_synth, err_synth, "rx");
+        plt::legend();
+      }
+      plt::ylabel("direction error [deg]");
+      plt::grid(true);
+      plt::title("angle between measured and true cable direction (mean " + fixed(dir_mean, 2) + " deg, RMS " +
+                 fixed(dir_rms, 2) + " deg)");
+      plt::subplot(3, 1, 3);
+      if (!tension.empty()) plt::plot(t_tension, tension, "b-");
+      plt::ylabel("tension [N]");
+      plt::xlabel("time [s]");
+      plt::grid(true);
+      plt::title(tension.empty() ? std::string("measured cable tension (none: every direction synthesised)")
+                                 : "measured cable tension (mean " + fixed(mean(tension), 2) + " N, min " +
+                                       fixed(*std::min_element(tension.begin(), tension.end()), 2) + " N)");
+      save_figure(folder / "cable_angle_error.png", show_);
     }
   }
   if (n_drones == 0) return;

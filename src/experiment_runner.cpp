@@ -162,7 +162,9 @@ class ResultsCsv {
             header.push_back("splay_vertical_tol_deg");
             for (const std::string& b : bodies) {
                 for (const char* c : {"_splay_mean_deg", "_splay_min_deg", "_splay_below_tol_pct",
-                                      "_thrust_cable_mean_deg", "_thrust_cable_min_deg"}) {
+                                      "_thrust_cable_mean_deg", "_thrust_cable_min_deg",
+                                      "_cable_dir_err_mean_deg", "_cable_dir_err_rms_deg",
+                                      "_cable_dir_err_max_deg", "_cable_tilt_bias_deg"}) {
                     header.push_back(b + c);
                 }
             }
@@ -188,7 +190,9 @@ class ResultsCsv {
                 const CableMetrics* c = (metrics && i < metrics->cables.size()) ? &metrics->cables[i] : nullptr;
                 for (double v : {c ? c->splay_mean_deg : NAN, c ? c->splay_min_deg : NAN,
                                  c ? c->splay_below_tol_pct : NAN, c ? c->thrust_cable_mean_deg : NAN,
-                                 c ? c->thrust_cable_min_deg : NAN}) {
+                                 c ? c->thrust_cable_min_deg : NAN, c ? c->cable_dir_err_mean_deg : NAN,
+                                 c ? c->cable_dir_err_rms_deg : NAN, c ? c->cable_dir_err_max_deg : NAN,
+                                 c ? c->cable_tilt_bias_deg : NAN}) {
                     row.push_back(csv_number(v));
                 }
             }
