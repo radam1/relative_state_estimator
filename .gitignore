@@ -4,3 +4,5 @@
 build 
 # Test Data is not included in the repo either, as the files will be quite big
 test_data/*
+# Too many results
+results/* 

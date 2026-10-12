@@ -25,7 +25,7 @@
 //
 // State layout (indices from StateLayout)
 //   payload   [p_L  v_L  Theta_L  w_L]                 12
-//   drone i   [p_i  v_i  Theta_i  (b_g,i  b_a,i)]       9, or 15 with IMU biases
+//   drone i   [p_i  v_i  Theta_i  (b_g,i)  (b_a,i)]     9, +3 per estimated IMU bias
 // Input layout: drone i owns input columns 6i..6i+2 (specific force f_i) and
 // 6i+3..6i+5 (body rate w_i).
 
@@ -45,7 +45,8 @@ using Inputs = std::vector<ImuSample>;
 
 struct StateLayout {
   int n_drones = 0;
-  bool with_bias = false;
+  bool with_gyro_bias = false;
+  bool with_acc_bias = false;
 
   static constexpr int kPayloadPos = 0;
   static constexpr int kPayloadVel = 3;
@@ -53,14 +54,14 @@ struct StateLayout {
   static constexpr int kPayloadRate = 9;
   static constexpr int kPayloadSize = 12;
 
-  int drone_size() const { return with_bias ? 15 : 9; }
+  int drone_size() const { return 9 + (with_gyro_bias ? 3 : 0) + (with_acc_bias ? 3 : 0); }
   int size() const { return kPayloadSize + n_drones * drone_size(); }
 
   int drone_pos(int i) const { return kPayloadSize + i * drone_size(); }
   int drone_vel(int i) const { return drone_pos(i) + 3; }
   int drone_att(int i) const { return drone_pos(i) + 6; }
-  int gyro_bias(int i) const { return drone_pos(i) + 9; }   // only valid with_bias
-  int acc_bias(int i) const { return drone_pos(i) + 12; }   // only valid with_bias
+  int gyro_bias(int i) const { return drone_pos(i) + 9; }                          // only valid with_gyro_bias
+  int acc_bias(int i) const { return drone_pos(i) + (with_gyro_bias ? 12 : 9); }  // only valid with_acc_bias
 
   int input_size() const { return 6 * n_drones; }
   static int input_acc(int i) { return 6 * i; }

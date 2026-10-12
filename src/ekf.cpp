@@ -33,7 +33,6 @@ UwbImuEkf::UwbImuEkf(const UwbImuEkfParams& params)
       use_uwb_(params.filter.use_uwb),
       use_mocap_(params.filter.use_mocap),
       use_cable_(params.filter.use_cable),
-      estimate_bias_(params.filter.estimate_imu_bias),
       anchor_drone_(params.filter.anchor_drone),
       n_(dynamics_.layout().size()) {
   const StateLayout& L = dynamics_.layout();
@@ -49,10 +48,8 @@ UwbImuEkf::UwbImuEkf(const UwbImuEkfParams& params)
     p0.segment<3>(L.drone_pos(i)).setConstant(sq(s0.drone_pos));
     p0.segment<3>(L.drone_vel(i)).setConstant(sq(s0.drone_vel));
     p0.segment<3>(L.drone_att(i)).setConstant(sq(s0.drone_att));
-    if (estimate_bias_) {
-      p0.segment<3>(L.gyro_bias(i)).setConstant(sq(s0.gyro_bias));
-      p0.segment<3>(L.acc_bias(i)).setConstant(sq(s0.acc_bias));
-    }
+    if (L.with_gyro_bias) p0.segment<3>(L.gyro_bias(i)).setConstant(sq(s0.gyro_bias));
+    if (L.with_acc_bias) p0.segment<3>(L.acc_bias(i)).setConstant(sq(s0.acc_bias));
   }
   P0_ = p0.asDiagonal();
 
@@ -69,11 +66,9 @@ UwbImuEkf::UwbImuEkf(const UwbImuEkfParams& params)
   VectorXd q_model = VectorXd::Zero(n_);
   q_model.segment<3>(kVel).setConstant(sq(q.payload_force));
   q_model.segment<3>(kRate).setConstant(sq(q.payload_torque));
-  if (estimate_bias_) {
-    for (int i = 0; i < L.n_drones; ++i) {
-      q_model.segment<3>(L.gyro_bias(i)).setConstant(sq(q.gyro_bias_walk));
-      q_model.segment<3>(L.acc_bias(i)).setConstant(sq(q.acc_bias_walk));
-    }
+  for (int i = 0; i < L.n_drones; ++i) {
+    if (L.with_gyro_bias) q_model.segment<3>(L.gyro_bias(i)).setConstant(sq(q.gyro_bias_walk));
+    if (L.with_acc_bias) q_model.segment<3>(L.acc_bias(i)).setConstant(sq(q.acc_bias_walk));
   }
   Q_ = q_model.asDiagonal();
 

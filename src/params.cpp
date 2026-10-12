@@ -161,7 +161,8 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
   }
 
   const Section filter = root.sub("filter");
-  p.filter.estimate_imu_bias = filter.flag("estimate_imu_bias");
+  p.filter.estimate_gyro_bias = filter.flag("estimate_gyro_bias");
+  p.filter.estimate_acc_bias = filter.flag("estimate_acc_bias");
   p.filter.anchor_drone = filter.integer("anchor_drone");
   if (p.filter.anchor_drone < 0 || p.filter.anchor_drone >= static_cast<int>(p.drones.size())) {
     filter.fail("anchor_drone", "must be a drone index in [0, " + std::to_string(p.drones.size()) + ")");

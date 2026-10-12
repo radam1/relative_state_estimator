@@ -35,7 +35,8 @@ struct DroneParams {
 };
 
 struct FilterParams {
-  bool estimate_imu_bias = false;
+  bool estimate_gyro_bias = false;
+  bool estimate_acc_bias = false;
   int anchor_drone = 0;               // drone index with MoCap position + attitude
   double max_integration_step = 1e-3; // [s]
   bool use_mocap = true;

@@ -1,0 +1,83 @@
+{
+    "both_enabled": {
+        "fscale7_circle_test1":{
+            "param_file": "bias_ablation/both_biases_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5],
+            "save_plots": true
+        },
+        "fscale7_circle_test2":{
+            "param_file": "bias_ablation/both_biases_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_circle_test3":{
+            "param_file": "bias_ablation/both_biases_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "only_accel": {
+        "fscale7_circle_test1":{
+            "param_file": "bias_ablation/only_accel_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5],
+            "save_plots": true
+        },
+        "fscale7_circle_test2":{
+            "param_file": "bias_ablation/only_accel_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_circle_test3":{
+            "param_file": "bias_ablation/only_accel_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "only_gyro": {
+        "fscale7_circle_test1":{
+            "param_file": "bias_ablation/only_gyro_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5],
+            "save_plots": true
+        },
+        "fscale7_circle_test2":{
+            "param_file": "bias_ablation/only_gyro_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_circle_test3":{
+            "param_file": "bias_ablation/only_gyro_bias_enabled.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    },
+    "both_disabled": {
+        "fscale7_circle_test1":{
+            "param_file": "bias_ablation/no_bias_estimated.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5],
+            "save_plots": true
+        },
+        "fscale7_circle_test2":{
+            "param_file": "bias_ablation/no_bias_estimated.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        },
+        "fscale7_circle_test3":{
+            "param_file": "bias_ablation/no_bias_estimated.yaml",
+            "runs": 5, 
+            "run_seeds": [1,2,3,4,5], 
+            "save_plots": false
+        }
+    }
+
+}

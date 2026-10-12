@@ -69,7 +69,9 @@ std::string state_name(const StateLayout& L, int k) {
   if (k < StateLayout::kPayloadSize) return std::string(kPayload[k / 3]) + "." + kAxis[k % 3];
   const int i = (k - StateLayout::kPayloadSize) / L.drone_size();
   const int j = (k - StateLayout::kPayloadSize) % L.drone_size();
-  return "d" + std::to_string(i) + "." + kDrone[j / 3] + "." + kAxis[j % 3];
+  int block = j / 3;
+  if (block == 3 && !L.with_gyro_bias) block = 4;  // the acc bias moves up when there is no gyro bias
+  return "d" + std::to_string(i) + "." + kDrone[block] + "." + kAxis[j % 3];
 }
 
 std::string input_name(int k) { return "u" + std::to_string(k / 6) + (k % 6 < 3 ? ".acc." : ".gyr.") + kAxis[k % 3]; }
@@ -167,10 +169,8 @@ VectorXd random_state(const UwbEkfDynamics& dyn, const UwbImuEkfParams& p, std::
     x.segment<3>(L.drone_pos(i)) = c + length * up - flycrane::euler_to_R(thi) * d.hook_offset;
     x.segment<3>(L.drone_vel(i)) = random_vec(rng, 0.5);
     x.segment<3>(L.drone_att(i)) = thi;
-    if (L.with_bias) {
-      x.segment<3>(L.gyro_bias(i)) = random_vec(rng, 0.05);
-      x.segment<3>(L.acc_bias(i)) = random_vec(rng, 0.3);
-    }
+    if (L.with_gyro_bias) x.segment<3>(L.gyro_bias(i)) = random_vec(rng, 0.05);
+    if (L.with_acc_bias) x.segment<3>(L.acc_bias(i)) = random_vec(rng, 0.3);
   }
   return x;
 }
@@ -246,13 +246,14 @@ void check_rotations(std::mt19937& rng) {
 // =============================================================================
 // 2. Jacobians
 // =============================================================================
-void check_jacobians(const UwbImuEkfParams& params, bool with_bias, std::mt19937& rng) {
+void check_jacobians(const UwbImuEkfParams& params, bool gyro_bias, bool acc_bias, std::mt19937& rng) {
   UwbImuEkfParams p = params;
-  p.filter.estimate_imu_bias = with_bias;
+  p.filter.estimate_gyro_bias = gyro_bias;
+  p.filter.estimate_acc_bias = acc_bias;
   const UwbEkfDynamics dyn(p);
   const StateLayout& L = dyn.layout();
-  std::cout << "\njacobians, " << (with_bias ? "with" : "without") << " IMU bias states (" << L.size()
-            << " states)\n";
+  const char* biases = gyro_bias ? (acc_bias ? "gyro + acc" : "gyro") : (acc_bias ? "acc" : "no");
+  std::cout << "\njacobians, " << biases << " IMU bias states (" << L.size() << " states)\n";
 
   const NameFn sname = [&L](int k) { return state_name(L, k); };
   Worst a, b, uwb, cable, mocap;
@@ -354,7 +355,8 @@ double system_energy(const UwbEkfDynamics& dyn, const UwbImuEkfParams& p, const 
 void check_physics(const UwbImuEkfParams& params) {
   std::cout << "\nphysics\n";
   UwbImuEkfParams p = params;
-  p.filter.estimate_imu_bias = false;
+  p.filter.estimate_gyro_bias = false;
+  p.filter.estimate_acc_bias = false;
   p.physics.allow_slack = false;  // the energy balance needs the spring in both directions
 
   const UwbEkfDynamics dyn(p);
@@ -424,8 +426,9 @@ int main(int argc, char** argv) {
 
     std::mt19937 rng(42);
     check_rotations(rng);
-    check_jacobians(params, false, rng);
-    check_jacobians(params, true, rng);
+    for (const bool gyro_bias : {false, true}) {
+      for (const bool acc_bias : {false, true}) check_jacobians(params, gyro_bias, acc_bias, rng);
+    }
     check_physics(params);
   } catch (const std::exception& e) {
     std::cerr << "error: " << e.what() << '\n';

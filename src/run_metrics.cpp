@@ -100,7 +100,8 @@ RunMetrics compute_run_metrics(const UwbImuEkfParams& params, const std::vector<
   // Same layout as the filter, so the state indices match the log.
   StateLayout layout;
   layout.n_drones = static_cast<int>(params.drones.size());
-  layout.with_bias = params.filter.estimate_imu_bias;
+  layout.with_gyro_bias = params.filter.estimate_gyro_bias;
+  layout.with_acc_bias = params.filter.estimate_acc_bias;
 
   RunMetrics m;
   for (int i = 0; i < layout.n_drones; i++) {

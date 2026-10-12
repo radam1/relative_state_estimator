@@ -90,7 +90,6 @@ class UwbImuEkf {
   bool use_uwb_;
   bool use_mocap_;
   bool use_cable_;
-  bool estimate_bias_;
   int anchor_drone_;
   int n_;  // number of states
 

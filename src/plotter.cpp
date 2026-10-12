@@ -262,7 +262,8 @@ TestPlotter::TestPlotter(const UwbImuEkfParams& params, const std::string& outpu
       display_splay_(params.diagnostics.display_splay)  {
   // Same layout as the filter, so the state indices match the log.
   layout_.n_drones = static_cast<int>(params.drones.size());
-  layout_.with_bias = params.filter.estimate_imu_bias;
+  layout_.with_gyro_bias = params.filter.estimate_gyro_bias;
+  layout_.with_acc_bias = params.filter.estimate_acc_bias;
   for (const DroneParams& drone : params.drones) {
     attach_points_.push_back(drone.attach_point_payload);
     hook_offsets_.push_back(drone.hook_offset);

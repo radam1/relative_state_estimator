@@ -47,7 +47,8 @@ UwbEkfDynamics::UwbEkfDynamics(const UwbImuEkfParams& params)
       payload_inertia_inv_(params.payload.inertia.cwiseInverse().asDiagonal()),
       drones_(params.drones) {
   layout_.n_drones = static_cast<int>(drones_.size());
-  layout_.with_bias = params.filter.estimate_imu_bias;
+  layout_.with_gyro_bias = params.filter.estimate_gyro_bias;
+  layout_.with_acc_bias = params.filter.estimate_acc_bias;
 }
 
 void UwbEkfDynamics::check_sizes(const VectorXd& x, const Inputs& u) const {
@@ -69,12 +70,12 @@ void UwbEkfDynamics::check_drone(int i) const {
 }
 
 Vector3d UwbEkfDynamics::body_rate(const VectorXd& x, int i, const Vector3d& gyr) const {
-  if (!layout_.with_bias) return gyr;
+  if (!layout_.with_gyro_bias) return gyr;
   return gyr - x.segment<3>(layout_.gyro_bias(i));
 }
 
 Vector3d UwbEkfDynamics::specific_force(const VectorXd& x, int i, const Vector3d& acc) const {
-  if (!layout_.with_bias) return acc;
+  if (!layout_.with_acc_bias) return acc;
   return acc - x.segment<3>(layout_.acc_bias(i));
 }
 
@@ -234,11 +235,9 @@ void UwbEkfDynamics::jacobians(const VectorXd& x, const Inputs& u, MatrixXd& A, 
   }
 
   // f depends on the biases only through (imu - bias), so df/db = -df/du.
-  if (L.with_bias) {
-    for (int i = 0; i < L.n_drones; ++i) {
-      A.middleCols<3>(L.gyro_bias(i)) = -B.middleCols<3>(StateLayout::input_gyr(i));
-      A.middleCols<3>(L.acc_bias(i)) = -B.middleCols<3>(StateLayout::input_acc(i));
-    }
+  for (int i = 0; i < L.n_drones; ++i) {
+    if (L.with_gyro_bias) A.middleCols<3>(L.gyro_bias(i)) = -B.middleCols<3>(StateLayout::input_gyr(i));
+    if (L.with_acc_bias) A.middleCols<3>(L.acc_bias(i)) = -B.middleCols<3>(StateLayout::input_acc(i));
   }
 }
 
