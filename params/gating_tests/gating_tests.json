@@ -1,0 +1,82 @@
+{
+    "no_gating": {
+        "fixed_circle_test1":{
+            "param_file": "gating_tests/no_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test2":{
+            "param_file": "gating_tests/no_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test3":{
+            "param_file": "gating_tests/no_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        }
+    },
+    "only_chi_gating": {
+        "fixed_circle_test1":{
+            "param_file": "gating_tests/only_chi_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test2":{
+            "param_file": "gating_tests/only_chi_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test3":{
+            "param_file": "gating_tests/only_chi_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        }
+    },
+    "only_scaling": {
+        "fixed_circle_test1":{
+            "param_file": "gating_tests/only_scaling.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test2":{
+            "param_file": "gating_tests/only_scaling.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test3":{
+            "param_file": "gating_tests/only_scaling.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        }
+    },
+    "both_gating": {
+        "fixed_circle_test1":{
+            "param_file": "gating_tests/both_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test2":{
+            "param_file": "gating_tests/both_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        },
+        "fixed_circle_test3":{
+            "param_file": "gating_tests/both_gating.yaml",
+            "runs": 1, 
+            "run_seeds": 1,
+            "save_plots": false
+        }
+    }
+}

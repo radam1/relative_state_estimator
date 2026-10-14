@@ -152,8 +152,7 @@ std::string fixed(double v, int digits) {
   return os.str();
 }
 
-// Index of the first error sample below the tolerance, i.e. where the estimate
-// counts as converged, or v.size() if it never gets there.
+// Detect where the filter converges to within the tolerance
 std::size_t convergence_index(const std::vector<double>& v, double convergence_tolerance) {
   for (std::size_t i = 0; i < v.size(); ++i) {
     if (v[i] < convergence_tolerance) return i;
@@ -396,6 +395,19 @@ void TestPlotter::plot_body(const std::vector<LogEntry>& log, const Body& body) 
     save_figure(folder / "position_covariance.png", show_);
     plot_sigma(body.title + " orientation 1-sigma", s.t, s.att_sigma_deg, kAngleNames, "deg");
     save_figure(folder / "orientation_covariance.png", show_);
+
+    // Gyro_Bias and Acc_Bias: estimated IMU biases (drones only, when estimated)
+    if (body.drone >= 0) {
+      const auto plot_bias = [&](int index, const std::string& name, const std::string& unit, const char* file) {
+        Triple bias;
+        for (const LogEntry& entry : log)
+          for (int k = 0; k < 3; k++) bias[k].push_back(entry.estimate.x[index + k]);
+        plot_estimate_vs_truth(body.title + " " + name, s.t, bias, {}, {}, kAxisNames, unit);
+        save_figure(folder / file, show_);
+      };
+      if (layout_.with_gyro_bias) plot_bias(layout_.gyro_bias(body.drone), "gyro bias", "rad/s", "gyro_bias.png");
+      if (layout_.with_acc_bias) plot_bias(layout_.acc_bias(body.drone), "accelerometer bias", "m/s^2", "acc_bias.png");
+    }
   }
 }
 

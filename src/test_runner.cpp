@@ -250,24 +250,26 @@ void TestRunner::step_ekf_for_event(const io::Event& event){
     }
 }
 
-// Count an update and, if it was applied, its NIS.
-void TestRunner::record_update(UpdateStats& stats, bool accepted){
-    if (accepted){
-        stats.accepted++;
-        stats.nis_sum += ekf_.last_nis();
-    } else {
-        stats.rejected++;
+// Count an update and, if it reached the gate, its NIS.
+void TestRunner::record_update(UpdateStats& stats, UpdateStatus status){
+    switch (status){
+        case UpdateStatus::Applied: stats.accepted++; break;
+        case UpdateStatus::Gated:   stats.gated++; break;
+        default:                    stats.rejected++; return;
     }
+    stats.nis_sum += ekf_.last_nis();
 }
 
-// Print the summary for a full run
+// Print the summary for a full run.  Mean NIS is before gating, so it stays a consistency check.
 void TestRunner::print_summary() const {
-    std::cout << "\nupdates      accepted  rejected  mean NIS  (expect)\n";
+    std::cout << "\nupdates      accepted   gated  gated%  rejected  mean NIS (pre-gate)  (expect)\n";
     const auto row = [](const std::string& name, const UpdateStats& s, const std::string& expect){
-        const double mean_nis = s.accepted > 0 ? s.nis_sum / s.accepted : 0.0;
+        const int n = s.accepted + s.gated;
+        const double mean_nis = n > 0 ? s.nis_sum / n : 0.0;
+        const double gated_pct = n > 0 ? 100.0 * s.gated / n : 0.0;
         std::cout << "  " << std::left << std::setw(10) << name << std::right << std::setw(9) << s.accepted
-                  << std::setw(10) << s.rejected << std::setw(10) << std::fixed << std::setprecision(2) << mean_nis
-                  << "  (" << expect << ")\n";
+                  << std::setw(8) << s.gated << std::setw(8) << std::fixed << std::setprecision(2) << gated_pct
+                  << std::setw(10) << s.rejected << std::setw(21) << mean_nis << "  (" << expect << ")\n";
     };
     row("uwb", uwb_stats_, "1");
     row("cable", cable_stats_, "2");

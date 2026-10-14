@@ -42,6 +42,7 @@ struct FilterParams {
   bool use_mocap = true;
   bool use_uwb = true;
   bool use_cable = true;
+  bool cable_tension_scaling = false;  // inflate cable noise at low tension (MeasurementNoise)
   double mocap_rate_hz = 50.0;
   double log_rate_hz = 50.0;
   bool random_offset_seed = false;   // true: seed the initial offset generator from std::random_device
@@ -68,8 +69,21 @@ struct ProcessNoise {
 struct MeasurementNoise {
   double uwb = 0.0;        // [m]
   double cable_dir = 0.0;  // [rad]
+  // With filter.cable_tension_scaling: sigma_dir^2 = cable_dir^2 + (cable_force / T)^2
+  double cable_force = 0.0;        // [N] force-observer noise perpendicular to the cable
+  double cable_min_tension = 0.0;  // [N] below this the cable update is skipped
   double mocap_pos = 0.0;  // [m]
   double mocap_att = 0.0;  // [rad]
+};
+
+// Chi^2 innovation gate.  A threshold <= 0 disables the gate for that sensor.
+struct GatingParams {
+  bool enabled = false;
+  double uwb = 0.0;                 // chi2(1 dof)
+  double cable = 0.0;               // chi2(2 dof): unit vector
+  double mocap = 0.0;               // chi2(6 dof)
+  int max_consecutive_rejects = 0;  // accept the next update after this many gated in a row; <= 0: never
+  double warmup_s = 0.0;            // no gating this long after initialize()
 };
 
 struct PlotParams {
@@ -95,6 +109,7 @@ struct UwbImuEkfParams {
   InitialSigma initial_sigma;
   ProcessNoise process_noise;
   MeasurementNoise measurement_noise;
+  GatingParams gating;
   PlotParams plot;
   DiagnosticsParams diagnostics; 
 };

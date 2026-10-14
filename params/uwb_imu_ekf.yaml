@@ -38,19 +38,20 @@ drone_geometry:
     uwb_antenna: [-0.09, -0.05, 0.04]
 
 filter:
-  estimate_gyro_bias: false      # estimate a gyro bias state per drone
+  estimate_gyro_bias: true      # estimate a gyro bias state per drone
   estimate_acc_bias: true       # estimate an accelerometer bias state per drone
   anchor_drone: 0               # index of the "captain" drone
   max_integration_step: 0.001   # longest RK4 step time(in seconds)
   use_mocap: true
   use_uwb: true
   use_cable: true
+  cable_tension_scaling: true   # inflate cable noise at low tension (see measurement_noise)
   mocap_rate_hz: 100.0          # anchor odom is subsampled to this rate
   log_rate_hz: 50.0             # rate at which estimates are logged for plotting
   random_offset_seed: false     # choose whether or not to use a random seed for the generator
   generator_seed: 1             # if random_offset_seed is false, this is the seed
   init_pose_offset: 0.0         # offset from ground truth of initial pose guess(applied in random direction)
-  init_ang_offset: 0.0         # offset from ground truth of initial orientation guess(applied in random direction)
+  init_ang_offset: 0.0          # offset from ground truth of initial orientation guess(applied in random direction)
 
 # Initial state covariance P0(expressed as 1-sigma stddev).
 initial_sigma:
@@ -61,14 +62,14 @@ initial_sigma:
   drone_pos: 0.05       # [m]
   drone_vel: 0.1        # [m/s]
   drone_att: 0.05       # [rad]
-  gyro_bias: 0.01       # [rad/s]
-  acc_bias: 0.1         # [m/s^2]   
+  gyro_bias: 0.01       # [rad/s]    
+  acc_bias: 0.2         # [m/s^2]   
 
 # Continuous-time noise densities from sim.
 process_noise:
   acc: 0.1              
   gyro: 0.01            
-  acc_bias_walk: 1.0e-3   
+  acc_bias_walk: 6.0e-3   
   gyro_bias_walk: 1.0e-4  
   payload_force: 0.5   # guess(not specifically modeled)
   payload_torque: 2.0  # guess(not specifically modeled)
@@ -76,14 +77,25 @@ process_noise:
 # measurement noise.
 measurement_noise:
   uwb: 0.3              # should match bag_converter.py noise_std
-  cable_dir: 0.035      
-  mocap_pos: 0.005      
-  mocap_att: 0.01       
+  cable_dir: 0.035
+  cable_force: 0.2          # For normalization
+  cable_min_tension: 3.0    # [N] Lower threshold to accept cable measurements
+  mocap_pos: 0.005
+  mocap_att: 0.01
+
+# Innovation gate on the Normalized Innovation Squared(NIS).
+gating:
+  enabled: true
+  uwb: 6.63                     
+  cable: 9.21                   
+  mocap: 0.0                    # should not be gated
+  max_consecutive_rejects: 20   # prevents filter from completely locking if it drifts
+  warmup_s: 2.0                 # [s] wait period before gating is initialized(depends on filter convergence rate)
 
 plot:
-  output_folder: "figure8_test1"
+  output_folder: "both_gating"
   enabled: true         # plotting AND/OR diagnostic info
-  save_plots: true     # whether or not to save the plots
+  save_plots: true      # whether or not to save the plots
   show: false           # whether or not to auto-show plots
 
 diagnostics: 

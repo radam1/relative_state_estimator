@@ -1,13 +1,7 @@
 #pragma once
-// Extended Kalman filter for the CAMLS payload + drones, built on the model in
-// dynamics.hpp (see there for the state layout and conventions).
+// Extended Kalman filter for the CAMLS payload/drones, built on the model in dynamics.hpp
 //
-//   prediction   RK4 on x' = f(x, u) with the drones' IMU readings as u,
-//                P <- Phi P Phi^T + (B Sigma_imu B^T + Q) h   per sub-step
-//   updates      UWB ranges, body-frame cable directions, anchor-drone MoCap
-//
-// Usage -- one call per timeline event, in time order:
-//
+// How to use:
 //   UwbImuEkf ekf(params);
 //   ekf.initialize(t0_ns, payload_pose, drone_poses);
 //   for each event:
@@ -15,10 +9,6 @@
 //     uwb   -> ekf.update_uwb(range);
 //     cable -> ekf.update_cable(drone, sample);
 //     mocap -> ekf.update_mocap(anchor_pose);
-//
-// Every call first propagates the filter to the sample's timestamp, so the
-// caller only needs predict_to() directly to evaluate the estimate at other
-// times (e.g. logging at a fixed rate).
 
 #include <cstdint>
 #include <vector>
@@ -38,33 +28,41 @@ struct EkfSnapshot {
   Eigen::VectorXd sigma;  // 1-sigma of each state, sqrt(diag(P))
 };
 
+// Outcome of an update call. Helps with debugging rejected measurements
+enum class UpdateStatus {
+  Applied,
+  Disabled,   // sensor disabled in the params
+  Gated,      // NIS above the gate threshold
+  Skipped,    // cable tension below cable_min_tension
+  Numerical,  // innovation covariance not positive definite
+};
+
 class UwbImuEkf {
  public:
   // constructor
   explicit UwbImuEkf(const UwbImuEkfParams& params);
 
-  // Start the filter at t_ns with P = P0 from `initial_sigma`.  Either give the
-  // full state, or the payload and drone poses (e.g. ground truth); biases
-  // then start at zero.
+  // Initialize filter with either the full state or the payload
   void initialize(int64_t t_ns, const Eigen::VectorXd& x0);
   void initialize(int64_t t_ns, const PoseSample& payload, const std::vector<PoseSample>& drones);
 
   // Methods:
-  // Prediction Step: propagate state and covariance to t_ns with the held IMU
-  // inputs.  Does nothing if t_ns is not later than the filter time.
+
+  // Prediction Step: propagate state and covariance to t_ns
   void predict_to(int64_t t_ns);
 
-  // Input: predict to the sample's time, then hold drone i's IMU reading until
-  // its next sample (zero-order hold).
+  // Update IMU reading(zero-order hold)
   void set_imu(int drone, const ImuSample& imu);
 
-  // Update Steps.  Each returns false if the sensor is disabled in the params
-  // or the innovation covariance was not positive definite.
-  bool update_uwb(const UwbRange& range);
-  bool update_cable(int drone, const CableSample& cable);
-  bool update_mocap(const PoseSample& pose);  // pose of the anchor drone
+  // Update Steps per-sensor
+  UpdateStatus update_uwb(const UwbRange& range);
+  UpdateStatus update_cable(int drone, const CableSample& cable);
+  UpdateStatus update_mocap(const PoseSample& pose);  // pose of the anchor drone
 
-  // Report the estimated states for the plotter
+  // Calculate cable noise.
+  Eigen::Matrix3d cable_noise(const CableSample& cable) const;
+
+  // Report the estimated states for the plotting and diagnostics
   EkfSnapshot report_current_readings() const;
 
   const StateLayout& layout() const { return dynamics_.layout(); }
@@ -73,14 +71,16 @@ class UwbImuEkf {
   const Eigen::MatrixXd& covariance() const { return P_; }
   int64_t time_ns() const { return t_ns_; }
   bool initialized() const { return initialized_; }
-  // Normalised innovation squared r^T S^-1 r of the last accepted update.
-  // Averages to the measurement dimension when the filter is consistent.
+  // Get the normalized innovation squared for the previous measurement
   double last_nis() const { return last_nis_; }
 
  private:
   // Helper Functions
-  // Shared EKF update for a residual r = z - h(x) with Jacobian H and noise R.
-  bool update(const Eigen::VectorXd& r, const Eigen::MatrixXd& H, const Eigen::MatrixXd& R);
+  // Shared EKF update for a residual r with Jacobian H and noise R.
+  // `gate` is the chi^2 threshold (<= 0: off), `rejects` the stream's count of
+  // consecutive gated updates.
+  UpdateStatus update(const Eigen::VectorXd& r, const Eigen::MatrixXd& H, const Eigen::MatrixXd& R, double gate,
+                      int& rejects);
   void require_initialized(const char* caller) const;
   void check_drone(int drone) const;
 
@@ -94,12 +94,26 @@ class UwbImuEkf {
   int n_;  // number of states
 
   // Noise models
-  Eigen::MatrixXd P0_;         // initial covariance
-  Eigen::MatrixXd Sigma_imu_;  // 6N x 6N, IMU noise densities^2, mapped through B
-  Eigen::MatrixXd Q_;          // n x n, unmodelled payload dynamics + bias random walks
+  Eigen::MatrixXd P0_;         
+  Eigen::MatrixXd Sigma_imu_;  
+  Eigen::MatrixXd Q_;          
   double R_uwb_;
-  Eigen::Matrix3d R_cable_;
+  bool cable_tension_scaling_;
+  double cable_dir_sigma_;
+  double cable_force_sigma_;
+  double cable_min_tension_;
   Eigen::Matrix<double, 6, 6> R_mocap_;
+
+  // Gating-related setup
+  double gate_uwb_;
+  double gate_cable_;
+  double gate_mocap_;
+  int max_rejects_;
+  int64_t warmup_ns_;
+  int64_t gate_start_ns_ = 0;   
+  int uwb_rejects_ = 0;        
+  std::vector<int> cable_rejects_;
+  int mocap_rejects_ = 0;
 
   // Private Variables for EKF (states, inputs, matrices, time)
   // States:
@@ -112,8 +126,7 @@ class UwbImuEkf {
   Eigen::MatrixXd phi_;  // transition matrix of the last sub-step
   Eigen::MatrixXd P_;
 
-  // Time-related: integer nanoseconds, like the CSV stamps.  Epoch time does
-  // not fit in a double exactly, so only differences are converted to seconds.
+  // Time-related vars. ROS time doesn't fit in a double, so use int nanoseconds.
   int64_t t_ns_ = 0;
   bool initialized_ = false;
   double last_nis_ = 0.0;

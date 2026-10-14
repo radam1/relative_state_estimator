@@ -75,10 +75,22 @@ UwbImuEkf::UwbImuEkf(const UwbImuEkfParams& params)
   // Measurement noise
   const MeasurementNoise& r = params.measurement_noise;
   R_uwb_ = sq(r.uwb);
-  R_cable_ = sq(r.cable_dir) * Matrix3d::Identity();
+  cable_tension_scaling_ = params.filter.cable_tension_scaling;
+  cable_dir_sigma_ = r.cable_dir;
+  cable_force_sigma_ = r.cable_force;
+  cable_min_tension_ = r.cable_min_tension;
   R_mocap_.setZero();
   R_mocap_.topLeftCorner<3, 3>() = sq(r.mocap_pos) * Matrix3d::Identity();
   R_mocap_.bottomRightCorner<3, 3>() = sq(r.mocap_att) * Matrix3d::Identity();
+
+  // Loading parameters for the NIS gates (if not enabled gate at 0.0 to allow all measurements to pass)
+  const GatingParams& g = params.gating;
+  gate_uwb_ = g.enabled ? g.uwb : 0.0;
+  gate_cable_ = g.enabled ? g.cable : 0.0;
+  gate_mocap_ = g.enabled ? g.mocap : 0.0;
+  max_rejects_ = g.max_consecutive_rejects;
+  warmup_ns_ = static_cast<int64_t>(std::llround(1e9 * g.warmup_s));
+  cable_rejects_.assign(L.n_drones, 0);
 
   // Initialize the inputs: until a drone's first IMU sample arrives, assume it hovers.
   u_.resize(L.n_drones);
@@ -102,6 +114,9 @@ void UwbImuEkf::initialize(int64_t t_ns, const VectorXd& x0) {
   wrap_angles(dynamics_.layout(), x_now_);
   P_ = P0_;
   t_ns_ = t_ns;
+  gate_start_ns_ = t_ns + warmup_ns_;
+  uwb_rejects_ = mocap_rejects_ = 0;
+  std::fill(cable_rejects_.begin(), cable_rejects_.end(), 0);
   initialized_ = true;
 }
 
@@ -165,51 +180,68 @@ void UwbImuEkf::predict_to(int64_t t_ns) {
 
 void UwbImuEkf::set_imu(int drone, const ImuSample& imu) {
   check_drone(drone);
-  predict_to(imu.t_ns);  // the previous reading applies up to this sample
+  predict_to(imu.t_ns);
   u_[drone] = imu;
 }
 
 // Update
 
-// Measurements arrive at different rates and times, so each one is applied on
-// its own, at its own timestamp. 
-bool UwbImuEkf::update_uwb(const UwbRange& range) {
-  if (!use_uwb_) return false;
+// Measurements arrive at different rates and times, so each one is applied on its own, at its own timestamp. 
+UpdateStatus UwbImuEkf::update_uwb(const UwbRange& range) {
+  if (!use_uwb_) return UpdateStatus::Disabled;
   predict_to(range.t_ns);
   RowVectorXd H;
   const double predicted = dynamics_.predict_uwb(x_now_, range.host, range.peer, &H);
-  return update(VectorXd::Constant(1, range.range - predicted), H, MatrixXd::Constant(1, 1, R_uwb_));
+  return update(VectorXd::Constant(1, range.range - predicted), H, MatrixXd::Constant(1, 1, R_uwb_), gate_uwb_,
+                uwb_rejects_);
 }
 
-bool UwbImuEkf::update_cable(int drone, const CableSample& cable) {
-  if (!use_cable_) return false;
+// If tension-based cov. scaling is enabled, use sigma^2 = sigma_cable_dir^2 + (cable_force / T)^2
+Matrix3d UwbImuEkf::cable_noise(const CableSample& cable) const {
+  double var = sq(cable_dir_sigma_);
+  if (cable_tension_scaling_ && cable.tension_valid) var += sq(cable_force_sigma_ / cable.tension);
+  return var * Matrix3d::Identity();
+}
+
+UpdateStatus UwbImuEkf::update_cable(int drone, const CableSample& cable) {
+  if (!use_cable_) return UpdateStatus::Disabled;
   check_drone(drone);
+  // If cable tension is below threshold then ignore measurement
+  if (cable_tension_scaling_ && cable.tension_valid && cable.tension < cable_min_tension_) return UpdateStatus::Skipped;
   predict_to(cable.t_ns);
   MatrixXd H;
   const Vector3d predicted = dynamics_.predict_cable_dir(x_now_, drone, &H);
-  return update(cable.s_body - predicted, H, R_cable_);
+  return update(cable.s_body - predicted, H, cable_noise(cable), gate_cable_, cable_rejects_[drone]);
 }
 
-bool UwbImuEkf::update_mocap(const PoseSample& pose) {
-  if (!use_mocap_) return false;
+UpdateStatus UwbImuEkf::update_mocap(const PoseSample& pose) {
+  if (!use_mocap_) return UpdateStatus::Disabled;
   predict_to(pose.t_ns);
   MatrixXd H;
   const Vector6d r = dynamics_.mocap_residual(x_now_, anchor_drone_, pose.p, pose.q.toRotationMatrix(), &H);
-  return update(r, H, R_mocap_);
+  return update(r, H, R_mocap_, gate_mocap_, mocap_rejects_);
 }
 
-bool UwbImuEkf::update(const VectorXd& r, const MatrixXd& H, const MatrixXd& R) {
+UpdateStatus UwbImuEkf::update(const VectorXd& r, const MatrixXd& H, const MatrixXd& R, double gate, int& rejects) {
   require_initialized("update");
 
   // innovation covariance
   const MatrixXd PHt = P_ * H.transpose();
   const MatrixXd S = H * PHt + R;
   const Eigen::LLT<MatrixXd> S_llt(S);
-  if (S_llt.info() != Eigen::Success) return false;  // S not positive definite
+  if (S_llt.info() != Eigen::Success) return UpdateStatus::Numerical;  // S not positive definite
+  last_nis_ = r.dot(S_llt.solve(r));
+
+  // Gating handling: off during warm-up, and lets one update through after
+  // max_rejects_ in a row so a drifted filter cannot lock itself out
+  if (gate > 0.0 && last_nis_ > gate && t_ns_ >= gate_start_ns_ && (max_rejects_ <= 0 || rejects < max_rejects_)) {
+    ++rejects;
+    return UpdateStatus::Gated;
+  }
+  rejects = 0;
 
   // Kalman gain(S is symmetric, so K^T = S^-1 (P H^T)^T)
   const MatrixXd K = S_llt.solve(PHt.transpose()).transpose();
-  last_nis_ = r.dot(S_llt.solve(r));
 
   // updated estimate
   x_now_ += K * r;
@@ -219,7 +251,7 @@ bool UwbImuEkf::update(const VectorXd& r, const MatrixXd& H, const MatrixXd& R) 
   const MatrixXd I_KH = MatrixXd::Identity(n_, n_) - K * H;
   P_ = I_KH * P_ * I_KH.transpose() + K * R * K.transpose();
   P_ = 0.5 * (P_ + P_.transpose());
-  return true;
+  return UpdateStatus::Applied;
 }
 
 // Report the estimator readings for plotting

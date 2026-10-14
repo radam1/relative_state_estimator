@@ -171,6 +171,7 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
   p.filter.use_mocap = filter.flag("use_mocap");
   p.filter.use_uwb = filter.flag("use_uwb");
   p.filter.use_cable = filter.flag("use_cable");
+  p.filter.cable_tension_scaling = filter.flag("cable_tension_scaling");
   p.filter.mocap_rate_hz = filter.positive("mocap_rate_hz");
   p.filter.log_rate_hz = filter.positive("log_rate_hz");
   p.filter.random_offset_seed = filter.flag("random_offset_seed");
@@ -202,8 +203,18 @@ UwbImuEkfParams load_params(const std::filesystem::path& yaml_file) {
   const Section r = root.sub("measurement_noise");
   p.measurement_noise.uwb = r.positive("uwb");
   p.measurement_noise.cable_dir = r.positive("cable_dir");
+  p.measurement_noise.cable_force = r.non_negative("cable_force");
+  p.measurement_noise.cable_min_tension = r.non_negative("cable_min_tension");
   p.measurement_noise.mocap_pos = r.positive("mocap_pos");
   p.measurement_noise.mocap_att = r.positive("mocap_att");
+
+  const Section gate = root.sub("gating");
+  p.gating.enabled = gate.flag("enabled");
+  p.gating.uwb = gate.number("uwb");
+  p.gating.cable = gate.number("cable");
+  p.gating.mocap = gate.number("mocap");
+  p.gating.max_consecutive_rejects = gate.integer("max_consecutive_rejects");
+  p.gating.warmup_s = gate.non_negative("warmup_s");
 
   const Section plot = root.sub("plot");
   p.plot.enabled = plot.flag("enabled");

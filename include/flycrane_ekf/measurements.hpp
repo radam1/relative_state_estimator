@@ -23,8 +23,7 @@ struct ImuSample {
   Eigen::Vector3d gyr;
 };
 
-// nav_msgs/Odometry.  Used as ground truth: p, v in world frame, q = R_world_body,
-// w = body angular rate, following the ROS Odometry convention.
+// nav_msgs/Odometry. 
 struct PoseSample {
   int64_t t_ns;
   Eigen::Vector3d p;
@@ -39,9 +38,7 @@ struct MotorSample {
   Eigen::Vector4d w;
 };
 
-// Cable state from agiros_pilot/wrench_observed: unit cable direction in the
-// DRONE BODY frame and the tension magnitude [N].  tension_valid is false when
-// the direction was synthesised from geometry (tension unknown, written as 0).
+// Cable state from agiros_pilot/wrench_observed:
 struct CableSample {
   int64_t t_ns;
   Eigen::Vector3d s_body;
@@ -49,8 +46,7 @@ struct CableSample {
   bool tension_valid;
 };
 
-// One peer-to-peer UWB range [m] between antenna `host` and antenna `peer`.
-// host/peer are drone indices (position in the configured drone list).
+// One peer-to-peer UWB range
 struct UwbRange {
   int64_t t_ns;
   uint8_t host;
@@ -58,10 +54,7 @@ struct UwbRange {
   double range;
 };
 
-// Sensor kind.  The enumerator order is also the processing priority for
-// events that share a timestamp: inputs (IMU, motors) before updates, so the
-// filter always propagates to t before it corrects at t.
-// Mocap events are PoseSamples from one drone's odom stream (see LoadOptions).
+// Sensor kind (order here is priority order for same-timestamped messages in the filter)
 enum class Sensor : uint8_t { Imu = 0, Motors = 1, Cable = 2, Uwb = 3, Mocap = 4 };
 
 inline const char* to_string(Sensor s) {

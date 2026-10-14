@@ -45,6 +45,7 @@ filter:
   use_mocap: true
   use_uwb: true
   use_cable: true
+  cable_tension_scaling: false
   mocap_rate_hz: 100.0          # anchor odom is subsampled to this rate
   log_rate_hz: 50.0             # rate at which estimates are logged for plotting
   random_offset_seed: false     # choose whether or not to use a random seed for the generator
@@ -62,13 +63,13 @@ initial_sigma:
   drone_vel: 0.1        # [m/s]
   drone_att: 0.05       # [rad]
   gyro_bias: 0.01       # [rad/s]    
-  acc_bias: 0.1         # [m/s^2]   
+  acc_bias: 0.2         # [m/s^2]   
 
 # Continuous-time noise densities from sim.
 process_noise:
   acc: 0.1              
   gyro: 0.01            
-  acc_bias_walk: 1.0e-3   
+  acc_bias_walk: 6.0e-3   
   gyro_bias_walk: 1.0e-4  
   payload_force: 0.5   # guess(not specifically modeled)
   payload_torque: 2.0  # guess(not specifically modeled)
@@ -77,11 +78,21 @@ process_noise:
 measurement_noise:
   uwb: 0.3              # should match bag_converter.py noise_std
   cable_dir: 0.035      
+  cable_force: 0.0
+  cable_min_tension: 1.0
   mocap_pos: 0.005      
   mocap_att: 0.01       
 
+gating:
+  enabled: false
+  uwb: 6.63
+  cable: 9.21
+  mocap: 0.0
+  max_consecutive_rejects: 20
+  warmup_s: 2.0
+
 plot:
-  output_folder: "random_test_2"
+  output_folder: "fixed_init_bias"
   enabled: true         # plotting AND/OR diagnostic info
   save_plots: true     # whether or not to save the plots
   show: false           # whether or not to auto-show plots

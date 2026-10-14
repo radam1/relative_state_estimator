@@ -39,11 +39,12 @@ struct TestConfig {
 // Load the params YAML of a test and apply the overrides in the TestConfig.
 UwbImuEkfParams load_test_params(const TestConfig& config);
 
-// Accepted and rejected updates of one sensor, and the sum of their NIS.
+// Update outcomes of one sensor.
 struct UpdateStats {
     int accepted = 0;
-    int rejected = 0;
-    double nis_sum = 0.0;
+    int gated = 0;          // rejected by the chi^2 gate
+    int rejected = 0;       // disabled, skipped or S not positive definite
+    double nis_sum = 0.0;   // over accepted + gated, i.e. before gating
 };
 
 class TestRunner {
@@ -85,7 +86,7 @@ class TestRunner {
         void initialize_filter();
         PoseSample get_payload_pose(int64_t t_ns) const;
         LogEntry make_log_entry() const;
-        void record_update(UpdateStats& stats, bool accepted);
+        void record_update(UpdateStats& stats, UpdateStatus status);
         void print_summary() const;
 };
 

@@ -1,6 +1,6 @@
 {
     "pos0.00_ang0": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -12,7 +12,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -24,7 +24,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -38,7 +38,7 @@
         }
     },
     "pos0.00_ang5": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -50,7 +50,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -62,7 +62,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -76,7 +76,7 @@
         }
     },
     "pos0.00_ang15": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -88,7 +88,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -100,7 +100,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -114,7 +114,7 @@
         }
     },
     "pos0.00_ang30": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -126,7 +126,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -138,7 +138,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -152,7 +152,7 @@
         }
     },
     "pos0.00_ang45": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -164,7 +164,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -176,7 +176,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -190,7 +190,7 @@
         }
     },
     "pos0.15_ang0": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.15_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -202,7 +202,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.15_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -214,7 +214,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.15_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -228,7 +228,7 @@
         }
     },
     "pos0.15_ang5": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.15_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -240,7 +240,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.15_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -252,7 +252,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.15_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -266,7 +266,7 @@
         }
     },
     "pos0.15_ang15": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.15_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -278,7 +278,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.15_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -290,7 +290,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.15_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -304,7 +304,7 @@
         }
     },
     "pos0.15_ang30": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.15_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -316,7 +316,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.15_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -328,7 +328,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.15_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -342,7 +342,7 @@
         }
     },
     "pos0.15_ang45": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.15_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -354,7 +354,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.15_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -366,7 +366,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.15_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -380,7 +380,7 @@
         }
     },
     "pos0.30_ang0": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.30_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -392,7 +392,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.30_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -404,7 +404,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.30_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -418,7 +418,7 @@
         }
     },
     "pos0.30_ang5": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.30_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -430,7 +430,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.30_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -442,7 +442,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.30_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -456,7 +456,7 @@
         }
     },
     "pos0.30_ang15": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.30_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -468,7 +468,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.30_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -480,7 +480,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.30_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -494,7 +494,7 @@
         }
     },
     "pos0.30_ang30": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.30_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -506,7 +506,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.30_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -518,7 +518,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.30_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -532,7 +532,7 @@
         }
     },
     "pos0.30_ang45": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.30_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -544,7 +544,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.30_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -556,7 +556,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.30_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -570,7 +570,7 @@
         }
     },
     "pos0.50_ang0": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.50_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -582,7 +582,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.50_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -594,7 +594,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.50_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -608,7 +608,7 @@
         }
     },
     "pos0.50_ang5": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.50_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -620,7 +620,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.50_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -632,7 +632,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.50_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -646,7 +646,7 @@
         }
     },
     "pos0.50_ang15": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.50_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -658,7 +658,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.50_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -670,7 +670,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.50_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -684,7 +684,7 @@
         }
     },
     "pos0.50_ang30": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.50_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -696,7 +696,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.50_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -708,7 +708,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.50_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -722,7 +722,7 @@
         }
     },
     "pos0.50_ang45": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos0.50_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -734,7 +734,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos0.50_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -746,7 +746,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos0.50_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -760,7 +760,7 @@
         }
     },
     "pos1.00_ang0": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos1.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -772,7 +772,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos1.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -784,7 +784,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos1.00_ang0.yaml",
             "runs": 5,
             "run_seeds": [
@@ -798,7 +798,7 @@
         }
     },
     "pos1.00_ang5": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos1.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -810,7 +810,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos1.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -822,7 +822,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos1.00_ang5.yaml",
             "runs": 5,
             "run_seeds": [
@@ -836,7 +836,7 @@
         }
     },
     "pos1.00_ang15": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos1.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -848,7 +848,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos1.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -860,7 +860,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos1.00_ang15.yaml",
             "runs": 5,
             "run_seeds": [
@@ -874,7 +874,7 @@
         }
     },
     "pos1.00_ang30": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos1.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -886,7 +886,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos1.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -898,7 +898,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos1.00_ang30.yaml",
             "runs": 5,
             "run_seeds": [
@@ -912,7 +912,7 @@
         }
     },
     "pos1.00_ang45": {
-        "fscale7_circle_test1": {
+        "fixed_circle_test1": {
             "param_file": "circle_init_sweep/pos1.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -924,7 +924,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test2": {
+        "fixed_circle_test2": {
             "param_file": "circle_init_sweep/pos1.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [
@@ -936,7 +936,7 @@
             ],
             "save_plots": false
         },
-        "fscale7_circle_test3": {
+        "fixed_circle_test3": {
             "param_file": "circle_init_sweep/pos1.00_ang45.yaml",
             "runs": 5,
             "run_seeds": [

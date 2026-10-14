@@ -2,32 +2,8 @@
 // Continuous-time model of the CAMLS system -- a cable-suspended payload
 // carried by N drones -- together with its analytic Jacobians and the
 // measurement models.  Equation numbers refer to
-// CAMLS_Range_Based_Observability_Analysis.pdf.
-//
-// Differences from the PDF
-// ------------------------
-//   * Each drone's IMU is an INPUT, as in agilib's EkfImu and ekf_cable_load:
-//         v_i'     = g + R_i (f_i - b_a,i)
-//         Theta_i' = T(Theta_i)^-1 (w_i - b_g,i)
-//     There is no motor model, the drone body rate is not a state, and the
-//     accelerometer and gyro are not measurements.
-//   * Eq. (11) sign: the cable pulls the payload with -tau_i q_i, so the torque
-//     is  -sum_i tau_i rho_i x (R_L^T q_i).  Eq. (36) already uses this sign.
-//
-// Conventions
-// -----------
-//   * World frame z up, gravity (0, 0, -g).
-//   * Theta = [roll, pitch, yaw] and R = Rz(yaw) Ry(pitch) Rx(roll).  The body
-//     rate is w = T(Theta) Theta', with T from eq. (16).  T is singular at
-//     pitch = +-90 deg.
-//   * q_i = e_i / l_i points from the drone hook h_i to the payload attach
-//     point c_i, i.e. downwards for a hanging payload.
-//
-// State layout (indices from StateLayout)
-//   payload   [p_L  v_L  Theta_L  w_L]                 12
-//   drone i   [p_i  v_i  Theta_i  (b_g,i)  (b_a,i)]     9, +3 per estimated IMU bias
-// Input layout: drone i owns input columns 6i..6i+2 (specific force f_i) and
-// 6i+3..6i+5 (body rate w_i).
+// CAMLS_Range_Based_Observability_Analysis.pdf (see for more context).
+// There are some differences between that obsevability analysis and ours, though. 
 
 #include <vector>
 
@@ -68,9 +44,8 @@ struct StateLayout {
   static int input_gyr(int i) { return 6 * i + 3; }
 };
 
-// Cable i: geometry, tension and -- if requested -- their Jacobians w.r.t. the
-// state (eqs. 28, 30-32).  Bias columns of the Jacobians are left zero: the
-// biases enter only through (imu - bias), see UwbEkfDynamics::jacobians().
+// Cable i: geometry, tension and their Jacobians w.r.t. the state
+// Bias columns of the Jacobians are left zero(biases enter only through imu-bias).
 struct Cable {
   Eigen::Vector3d e;       // c_i - h_i, world frame
   Eigen::Vector3d e_dot;
@@ -99,23 +74,19 @@ class UwbEkfDynamics {
   // B = df/du (n x 6N).
   void jacobians(const Eigen::VectorXd& x, const Inputs& u, Eigen::MatrixXd& A, Eigen::MatrixXd& B) const;
 
-  // One classic Runge-Kutta 4 step of length h with u held constant.
+  // One Runge-Kutta 4 step of length h with u held constant
   Eigen::VectorXd rk4_step(const Eigen::VectorXd& x, const Inputs& u, double h) const;
 
-  // Cable i.  `gyr` is drone i's raw gyro reading; it only affects e_dot and
-  // the tension (through the damper).
+  // Cable i. `gyr` is drone i's raw gyro reading
   Cable compute_cable(const Eigen::VectorXd& x, int i, const Eigen::Vector3d& gyr, bool with_jacobians) const;
 
-  // ---- measurement models.  If H is given it is set to dh/dx.
   // Range between the UWB antennas of two drones, eqs. (41)-(42).
   double predict_uwb(const Eigen::VectorXd& x, int host, int peer, Eigen::RowVectorXd* H = nullptr) const;
 
   // Unit cable direction in drone i's body frame, s_i = R_i^T q_i, eq. (33).
   Eigen::Vector3d predict_cable_dir(const Eigen::VectorXd& x, int i, Eigen::MatrixXd* H = nullptr) const;
 
-  // MoCap residual for drone i, r = [p_meas - p_i ; Log(R_i^T R_meas)], so the
-  // filter applies x += K r directly.  H = [I at p_i ; T(Theta_i) at Theta_i]
-  // (eq. 40) is exact for small attitude residuals.
+  // MoCap residual for drone i
   Vector6d mocap_residual(const Eigen::VectorXd& x, int i, const Eigen::Vector3d& p_meas,
                           const Eigen::Matrix3d& R_meas, Eigen::MatrixXd* H = nullptr) const;
 
@@ -135,9 +106,7 @@ class UwbEkfDynamics {
   std::vector<DroneParams> drones_;
 };
 
-// =============================================================================
 // Rotation helpers
-// =============================================================================
 Eigen::Matrix3d skew(const Eigen::Vector3d& v);             // skew(a) b = a x b
 Eigen::Matrix3d euler_to_R(const Eigen::Vector3d& theta);
 Eigen::Vector3d R_to_euler(const Eigen::Matrix3d& R);

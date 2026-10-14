@@ -28,6 +28,7 @@
 #include <Eigen/Dense>
 
 #include "flycrane_ekf/dynamics.hpp"
+#include "flycrane_ekf/ekf.hpp"
 #include "flycrane_ekf/params.hpp"
 
 namespace {
@@ -413,6 +414,69 @@ void check_physics(const UwbImuEkfParams& params) {
   }
 }
 
+// Tension-scaled cable noise and the chi^2 gate.
+void check_filter(const UwbImuEkfParams& params) {
+  using flycrane::UpdateStatus;
+  using flycrane::UwbImuEkf;
+  std::cout << "\nfilter\n";
+  UwbImuEkfParams p = params;
+  p.filter.estimate_gyro_bias = p.filter.estimate_acc_bias = false;
+  p.filter.use_uwb = p.filter.use_cable = true;
+  p.filter.cable_tension_scaling = true;
+  p.measurement_noise.cable_dir = 0.02;
+  p.measurement_noise.cable_force = 0.1;
+  p.measurement_noise.cable_min_tension = 1.0;
+  p.gating = {true, 6.63, 9.21, 0.0, 3, 0.0};
+
+  // cable noise
+  const UwbImuEkf scaled(p);
+  const flycrane::CableSample at2N{0, Vector3d::UnitZ(), 2.0, true};
+  const flycrane::CableSample unknown{0, Vector3d::UnitZ(), 0.0, false};
+  const double want = 0.02 * 0.02 + 0.05 * 0.05;
+  report("cable noise at T = 2 N", std::abs(scaled.cable_noise(at2N)(0, 0) - want) < 1e-15,
+         sci(scaled.cable_noise(at2N)(0, 0)) + " vs " + sci(want));
+  report("cable noise, tension unknown", scaled.cable_noise(unknown)(0, 0) == 0.02 * 0.02, "floor only");
+  UwbImuEkfParams p_off = p;
+  p_off.filter.cable_tension_scaling = false;
+  report("cable noise, scaling off", UwbImuEkf(p_off).cable_noise(at2N)(0, 0) == 0.02 * 0.02, "floor only");
+
+  VectorXd x0;
+  Inputs u;
+  if (!vertical_equilibrium(UwbEkfDynamics(p), p, x0, u)) {
+    report("vertical equilibrium exists", false, "needed for the filter checks");
+    return;
+  }
+
+  // a cable below cable_min_tension is skipped
+  UwbImuEkf ekf(p);
+  ekf.initialize(0, x0);
+  const flycrane::CableSample slack{0, Vector3d::UnitZ(), 0.5, true};
+  report("slack cable skipped", ekf.update_cable(0, slack) == UpdateStatus::Skipped, "T = 0.5 N < 1 N");
+
+  // UWB gate: an outlier leaves x and P untouched, a nominal range is applied
+  const double r_true = ekf.dynamics().predict_uwb(x0, 0, 1);
+  const flycrane::UwbRange outlier{0, 0, 1, r_true + 5.0};
+  const flycrane::UwbRange nominal{0, 0, 1, r_true + 0.01};
+  const VectorXd x_before = ekf.state();
+  const MatrixXd P_before = ekf.covariance();
+  const UpdateStatus s_out = ekf.update_uwb(outlier);
+  report("outlier gated", s_out == UpdateStatus::Gated && ekf.state() == x_before && ekf.covariance() == P_before,
+         "NIS " + sci(ekf.last_nis()));
+  report("nominal range applied", ekf.update_uwb(nominal) == UpdateStatus::Applied, "NIS " + sci(ekf.last_nis()));
+
+  // after max_consecutive_rejects (3) gated in a row, the next one goes through
+  ekf.initialize(0, x0);
+  bool gated = true;
+  for (int k = 0; k < 3; ++k) gated = gated && ekf.update_uwb(outlier) == UpdateStatus::Gated;
+  report("lock-out override", gated && ekf.update_uwb(outlier) == UpdateStatus::Applied, "3 gated, then applied");
+
+  // no gating during warm-up
+  p.gating.warmup_s = 1.0;
+  UwbImuEkf warm(p);
+  warm.initialize(0, x0);
+  report("no gating during warm-up", warm.update_uwb(outlier) == UpdateStatus::Applied, "t = 0 < 1 s");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -430,6 +494,7 @@ int main(int argc, char** argv) {
       for (const bool acc_bias : {false, true}) check_jacobians(params, gyro_bias, acc_bias, rng);
     }
     check_physics(params);
+    check_filter(params);
   } catch (const std::exception& e) {
     std::cerr << "error: " << e.what() << '\n';
     return 1;
